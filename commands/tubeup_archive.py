@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import re
 import shutil
 import time
@@ -15,6 +16,14 @@ from discord.ext import commands, tasks
 from modules.embed_builder import EmbedBuilder
 
 _DOWNLOAD_BASE = Path(__file__).parent.parent / "tubeup_downloads"
+
+
+def _detect_link_type(link: str) -> str:
+    if "list=" in link or "/playlist" in link:
+        return "playlist"
+    if re.search(r"(?:youtube\.com|youtu\.be)/(@|c/|channel/|user/)", link):
+        return "channel"
+    return "video"
 
 
 class TubeupArchive(commands.Cog):
@@ -42,10 +51,10 @@ class TubeupArchive(commands.Cog):
 
     @app_commands.command(
         name="tubeup-archive",
-        description="Archive a video to the Internet Archive using tubeup.",
+        description="Archive a video, playlist, or channel to the Internet Archive using tubeup.",
     )
     @app_commands.describe(
-        link="Video URL to archive — supports YouTube and any other yt-dlp compatible site."
+        link="URL to archive — supports YouTube videos, playlists, channels, and any other yt-dlp compatible site."
     )
     async def tubeup_archive(self, interaction: discord.Interaction, link: str) -> None:
         verbose: bool = getattr(self.bot, "verbose", False)
@@ -61,12 +70,16 @@ class TubeupArchive(commands.Cog):
 
         await interaction.response.defer()
 
+        link_type = _detect_link_type(link)
+        link_label = link_type.capitalize()
+        is_multi = link_type in ("playlist", "channel")
+
         init_embed = (
             EmbedBuilder(
                 title="Archive Request",
                 description=(
                     f"Initializing archive request for `{link}`...\n"
-                    "Sending request to preserve video..."
+                    f"Sending request to preserve {link_type}..."
                 ),
                 color=discord.Color.yellow(),
             )
@@ -78,13 +91,14 @@ class TubeupArchive(commands.Cog):
         job_dir = _DOWNLOAD_BASE / str(uuid.uuid4())
         job_dir.mkdir(parents=True, exist_ok=True)
         self._active_job_dirs.add(job_dir)
+        _cookies = os.getenv("TUBEUP_COOKIES")
         try:
             try:
                 process = await asyncio.create_subprocess_exec(
                     "tubeup",
                     link,
                     "--dir", str(job_dir),
-                    "--cookies-from-browser", "chrome",
+                    *([f"--cookies={_cookies}"] if _cookies else []),
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.STDOUT,
                 )
@@ -105,17 +119,20 @@ class TubeupArchive(commands.Cog):
                 return
 
             if verbose:
-                logging.debug("[tubeup-archive] running: tubeup %s --dir %s --cookies-from-browser chrome", link, job_dir)
+                _cookies_str = f" --cookies={_cookies}" if _cookies else ""
+                logging.debug("[tubeup-archive] running: tubeup %s --dir %s%s", link, job_dir, _cookies_str)
 
             assert process.stdout is not None
-            archive_url: str | None = None
-            already_exists: bool = False
+            archived_urls: list[str] = []
+            already_exists_count: int = 0
             ia_identifier: str | None = None
+            error_count: int = 0
+            total_count: int = 0
             rate_limited: bool = False
             connection_error: bool = False
 
             async def _drain_stdout() -> None:
-                nonlocal archive_url, already_exists, ia_identifier, rate_limited, connection_error
+                nonlocal already_exists_count, ia_identifier, error_count, total_count, rate_limited, connection_error
                 buf = b""
                 while True:
                     chunk = await process.stdout.read(4096)
@@ -132,15 +149,21 @@ class TubeupArchive(commands.Cog):
                         if verbose:
                             logging.debug("[tubeup] %s", line)
                         if "already exists" in line.lower():
-                            already_exists = True
+                            already_exists_count += 1
                         if "please reduce your request rate" in line.lower() or "appears to be spam" in line.lower():
                             rate_limited = True
                         if "readtimeouterror" in line.lower() or ("connectionerror" in line.lower() and "archive.org" in line.lower()):
                             connection_error = True
-                        if archive_url is None:
-                            m = re.search(r"https://archive\.org/details/\S+", line)
-                            if m:
-                                archive_url = m.group(0).rstrip(".,;)'\"")
+                        if re.match(r"ERROR:", line):
+                            error_count += 1
+                        m = re.search(r"Downloading item \d+ of (\d+)", line)
+                        if m:
+                            total_count = max(total_count, int(m.group(1)))
+                        m = re.search(r"https://archive\.org/details/\S+", line)
+                        if m:
+                            url = m.group(0).rstrip(".,;)'\"")
+                            if url not in archived_urls:
+                                archived_urls.append(url)
                         if ia_identifier is None:
                             m = re.search(r"(?:identifier|item):\s*([\w-]+)", line, re.IGNORECASE)
                             if m:
@@ -150,10 +173,17 @@ class TubeupArchive(commands.Cog):
                 while True:
                     await asyncio.sleep(15)
                     try:
+                        count = len(archived_urls)
+                        if is_multi and count > 0:
+                            desc = f"Archived {count} item{'s' if count != 1 else ''} so far..."
+                        elif is_multi:
+                            desc = f"{link_label} is being preserved..."
+                        else:
+                            desc = "Video is being preserved..."
                         await msg.edit(
                             embed=EmbedBuilder(
-                                title="Archiving Video...",
-                                description="Video is being preserved...",
+                                title=f"Archiving {link_label}...",
+                                description=desc,
                                 color=discord.Color.yellow(),
                             )
                             .set_timestamp()
@@ -173,37 +203,71 @@ class TubeupArchive(commands.Cog):
 
             if verbose:
                 logging.debug(
-                    "[tubeup-archive] tubeup exited with code %s | archive_url=%s | already_exists=%s",
+                    "[tubeup-archive] tubeup exited with code %s | archived=%s | errors=%s | total=%s",
                     process.returncode,
-                    archive_url,
-                    already_exists,
+                    len(archived_urls),
+                    error_count,
+                    total_count,
                 )
 
-            if archive_url is None and ia_identifier:
-                archive_url = f"https://archive.org/details/{ia_identifier}"
-            if archive_url is None:
+            if not archived_urls and ia_identifier:
+                archived_urls.append(f"https://archive.org/details/{ia_identifier}")
+            if not archived_urls:
                 yt_id = re.search(r"(?:v=|youtu\.be/)([\w-]{11})", link)
                 if yt_id:
-                    archive_url = f"https://archive.org/details/youtube-{yt_id.group(1)}"
+                    archived_urls.append(f"https://archive.org/details/youtube-{yt_id.group(1)}")
 
-            if process.returncode == 0:
-                if already_exists:
-                    status_text = "**Status:** Already archived"
-                    title = "✅ Already Archived"
-                else:
-                    status_text = "**Status:** Archive succeeded"
-                    title = "✅ Archive Complete"
-                builder = (
-                    EmbedBuilder(
-                        title=title,
-                        description=status_text,
-                        color=discord.Color.green(),
+            succeeded = len(archived_urls)
+            all_already_existed = already_exists_count > 0 and already_exists_count >= succeeded and not error_count
+
+            def _build_url_list(urls: list[str], limit: int = 1024) -> str:
+                lines: list[str] = []
+                total_len = 0
+                for i, u in enumerate(urls):
+                    if total_len + len(u) + 1 > limit - 20:
+                        lines.append(f"\u2026 and {len(urls) - i} more")
+                        break
+                    lines.append(u)
+                    total_len += len(u) + 1
+                return "\n".join(lines)
+
+            if process.returncode == 0 or (succeeded > 0 and not connection_error):
+                if is_multi:
+                    if error_count:
+                        title = "⚠️ Partially Archived"
+                        color = discord.Color.orange()
+                    elif all_already_existed:
+                        title = "✅ Already Archived"
+                        color = discord.Color.green()
+                    else:
+                        title = "✅ Archive Complete"
+                        color = discord.Color.green()
+                    summary = f"**{succeeded}** archived"
+                    if already_exists_count:
+                        summary += f" ({already_exists_count} already existed)"
+                    if error_count:
+                        summary += f", **{error_count}** failed"
+                    builder = (
+                        EmbedBuilder(title=title, description=summary, color=color)
+                        .add_field(name=link_label, value=link)
                     )
-                    .add_field(name="Video", value=link)
-                )
-                if archive_url:
-                    builder.add_field(name="Archive URL", value=archive_url)
-                final_embed = builder.set_timestamp().build()
+                    if archived_urls:
+                        builder.add_field(name="Archive URLs", value=_build_url_list(archived_urls))
+                    final_embed = builder.set_timestamp().build()
+                else:
+                    if all_already_existed:
+                        status_text = "**Status:** Already archived"
+                        title = "✅ Already Archived"
+                    else:
+                        status_text = "**Status:** Archive succeeded"
+                        title = "✅ Archive Complete"
+                    builder = (
+                        EmbedBuilder(title=title, description=status_text, color=discord.Color.green())
+                        .add_field(name=link_label, value=link)
+                    )
+                    if archived_urls:
+                        builder.add_field(name="Archive URL", value=archived_urls[0])
+                    final_embed = builder.set_timestamp().build()
             elif connection_error:
                 final_embed = (
                     EmbedBuilder(
@@ -214,7 +278,7 @@ class TubeupArchive(commands.Cog):
                         ),
                         color=discord.Color.red(),
                     )
-                    .add_field(name="Video", value=link)
+                    .add_field(name=link_label, value=link)
                     .set_timestamp()
                     .build()
                 )
@@ -228,7 +292,7 @@ class TubeupArchive(commands.Cog):
                         ),
                         color=discord.Color.orange(),
                     )
-                    .add_field(name="Video", value=link)
+                    .add_field(name=link_label, value=link)
                     .set_timestamp()
                     .build()
                 )
@@ -236,7 +300,7 @@ class TubeupArchive(commands.Cog):
                 final_embed = (
                     EmbedBuilder(
                         title="❌ Archive Failed",
-                        description=f"**Video:** {link}",
+                        description=f"**{link_label}:** {link}",
                         color=discord.Color.red(),
                     )
                     .set_timestamp()

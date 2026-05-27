@@ -31,6 +31,14 @@ Log in with the `ia` CLI:
 ia configure
 ```
 
+### 2a. Export cookies (optional, for age-restricted or private content)
+
+Install the **[Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)** Chrome extension, export cookies for `youtube.com`, save the file, then set the path in `.env`:
+
+```env
+TUBEUP_COOKIES=/path/to/cookies.txt
+```
+
 ### 3. Create a `.env` file
 
 ```env
