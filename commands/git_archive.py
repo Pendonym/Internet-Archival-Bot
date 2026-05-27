@@ -37,18 +37,34 @@ class GitArchive(commands.Cog):
         link=(
             "Repository URL to archive — supports GitHub, GitLab, Codeberg, Gitea, "
             "Bitbucket, GitFlic, Gitee, SourceForge, and self-hosted instances."
-        )
+        ),
+        all_files="Include all repository files (default: False).",
+        include_wiki="Include the repository wiki (default: False).",
+        all_releases="Include all releases (default: False).",
+        all_branches="Include all branches (default: False).",
     )
-    async def git_archive(self, interaction: discord.Interaction, link: str) -> None:
+    async def git_archive(
+        self,
+        interaction: discord.Interaction,
+        link: str,
+        all_files: bool = False,
+        include_wiki: bool = False,
+        all_releases: bool = False,
+        all_branches: bool = False,
+    ) -> None:
         verbose: bool = getattr(self.bot, "verbose", False)
         if verbose:
             logging.debug(
-                "[git-archive] invoked by %s (id=%s) in guild=%s channel=%s | link=%s",
+                "[git-archive] invoked by %s (id=%s) in guild=%s channel=%s | link=%s all_files=%s include_wiki=%s all_releases=%s all_branches=%s",
                 interaction.user,
                 interaction.user.id,
                 interaction.guild_id,
                 interaction.channel_id,
                 link,
+                all_files,
+                include_wiki,
+                all_releases,
+                all_branches,
             )
         await interaction.response.defer()
 
@@ -67,9 +83,17 @@ class GitArchive(commands.Cog):
         msg = await interaction.followup.send(embed=init_embed, wait=True)
 
         try:
+            cmd = ["iagitbetter", link]
+            if all_files:
+                cmd.append("--all-files")
+            if include_wiki:
+                cmd.append("--include-wiki")
+            if all_releases:
+                cmd.append("--all-releases")
+            if all_branches:
+                cmd.append("--all-branches")
             process = await asyncio.create_subprocess_exec(
-                "iagitbetter",
-                link,
+                *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,
             )
@@ -90,7 +114,7 @@ class GitArchive(commands.Cog):
             return
 
         if verbose:
-            logging.debug("[git-archive] running: iagitbetter %s", link)
+            logging.debug("[git-archive] running: %s", " ".join(cmd))
 
         assert process.stdout is not None
         archive_url: str | None = None
