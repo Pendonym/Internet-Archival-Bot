@@ -18,6 +18,10 @@ COMMANDS_DIR = BASE_DIR / "commands"
 
 load_dotenv(BASE_DIR / ".env")
 
+_local_bin = BASE_DIR / ".local" / "bin"
+if _local_bin.exists():
+    os.environ["PATH"] = str(_local_bin) + os.pathsep + os.environ.get("PATH", "")
+
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix=[], intents=intents)
 
