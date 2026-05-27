@@ -84,6 +84,7 @@ class TubeupArchive(commands.Cog):
                     "tubeup",
                     link,
                     "--dir", str(job_dir),
+                    "--cookies-from-browser", "chrome",
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.STDOUT,
                 )
@@ -104,7 +105,7 @@ class TubeupArchive(commands.Cog):
                 return
 
             if verbose:
-                logging.debug("[tubeup-archive] running: tubeup %s --dir %s", link, job_dir)
+                logging.debug("[tubeup-archive] running: tubeup %s --dir %s --cookies-from-browser chrome", link, job_dir)
 
             assert process.stdout is not None
             archive_url: str | None = None

@@ -7,9 +7,9 @@ A Discord bot for archiving content to the [Internet Archive](https://archive.or
 | Command | Description |
 |---|---|
 | `/ping` | Check bot latency |
-| `/git-archive link:` | Archive a git repository via [iagitbetter](https://github.com/Andres9890/iagitbetter) |
+| `/git-archive link: [all_files:] [include_wiki:] [all_releases:] [all_branches:]` | Archive a git repository via [iagitbetter](https://github.com/Andres9890/iagitbetter) |
 | `/tubeup-archive link:` | Archive a video (YouTube or any yt-dlp source) via [tubeup](https://github.com/bibanon/tubeup) |
-| `/web-archive link:` | Save a web page to the Wayback Machine via Save Page Now |
+| `/web-archive link: [outlinks:] [error_pages:] [screenshot:] [disable_adblocker:] [my_web_archive:]` | Save a web page to the Wayback Machine via Save Page Now |
 
 ## Setup
 
