@@ -80,9 +80,10 @@ class TubeupArchive(commands.Cog):
         archive_url: str | None = None
         already_exists: bool = False
         ia_identifier: str | None = None
+        rate_limited: bool = False
 
         async def _drain_stdout() -> None:
-            nonlocal archive_url, already_exists, ia_identifier
+            nonlocal archive_url, already_exists, ia_identifier, rate_limited
             buf = b""
             while True:
                 chunk = await process.stdout.read(4096)
@@ -100,6 +101,8 @@ class TubeupArchive(commands.Cog):
                         logging.debug("[tubeup] %s", line)
                     if "already exists" in line.lower():
                         already_exists = True
+                    if "please reduce your request rate" in line.lower() or "appears to be spam" in line.lower():
+                        rate_limited = True
                     if archive_url is None:
                         m = re.search(r"https://archive\.org/\S+", line)
                         if m:
@@ -167,6 +170,20 @@ class TubeupArchive(commands.Cog):
             if archive_url:
                 builder.add_field(name="Archive URL", value=archive_url)
             final_embed = builder.set_timestamp().build()
+        elif rate_limited:
+            final_embed = (
+                EmbedBuilder(
+                    title="⏳ Upload Rate Limited",
+                    description=(
+                        "The Internet Archive rejected this upload — your account is being rate limited or flagged as spam.\n"
+                        "Try again later, or contact `info@archive.org` if this keeps happening."
+                    ),
+                    color=discord.Color.orange(),
+                )
+                .add_field(name="Video", value=link)
+                .set_timestamp()
+                .build()
+            )
         else:
             final_embed = (
                 EmbedBuilder(
@@ -181,11 +198,11 @@ class TubeupArchive(commands.Cog):
         try:
             await msg.edit(embed=final_embed)
         except discord.HTTPException as exc:
-            if exc.status == 401 and interaction.channel is not None:
-                await interaction.channel.send(
-                    content=interaction.user.mention,
-                    embed=final_embed,
-                )
+            if exc.status == 401:
+                try:
+                    await interaction.user.send(embed=final_embed)
+                except discord.HTTPException:
+                    pass
             else:
                 raise
 

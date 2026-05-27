@@ -52,6 +52,10 @@ async def load_command_extensions() -> None:
 
 @bot.event
 async def setup_hook() -> None:
+    from discord import app_commands
+    bot.tree.allowed_installs = app_commands.AppInstallationType(guild=True, user=True)
+    bot.tree.allowed_contexts = app_commands.AppCommandContext(guild=True, dm_channel=True, private_channel=True)
+
     for event_file in sorted(EVENTS_DIR.glob("*.py")):
         if event_file.name.startswith("_"):
             continue

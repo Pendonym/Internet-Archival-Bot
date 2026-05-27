@@ -1,15 +1,51 @@
-This is the official Discord bot for the lumin.rest Roblox script hub. This bot helps manage license keys for the product as well as giving guides on frequently asked things.
+# Internet Archival Bot
 
-Commands created are hybrid commands, meaning they support slash commands (/example) and context/chat commands (l.example).
+A Discord bot for archiving content to the [Internet Archive](https://archive.org). Supports archiving git repositories, videos, and web pages via slash commands.
+
+## Commands
+
+| Command | Description |
+|---|---|
+| `/ping` | Check bot latency |
+| `/git-archive link:` | Archive a git repository via [iagitbetter](https://github.com/Cubified/iagitbetter) |
+| `/tubeup-archive link:` | Archive a video (YouTube or any yt-dlp source) via [tubeup](https://github.com/bibanon/tubeup) |
+| `/web-archive link:` | Save a web page to the Wayback Machine via Save Page Now |
+
+## Setup
 
 > [!TIP]
-> To start your own Discord bot, you need to create a `.env` file and supply the `DISCORD_TOKEN`, `LUARMOR_KEY` (API key), `PRODUCT_NAME`, `WEBSITE_URL`, `BOT_PREFIX` values.
+> Don't want to host it yourself? [Add the already-running bot to your account or server.](https://discord.com/oauth2/authorize?client_id=1508783480266293439)
+> Archived content is uploaded under the [@yt-dlp_bot](https://archive.org/details/@yt-dlp_bot) Internet Archive account.
+
+### 1. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 2. Configure Internet Archive credentials
+
+Log in with the `ia` CLI:
+
+```bash
+ia configure
+```
+
+### 3. Create a `.env` file
+
+```env
+DISCORD_TOKEN=your_discord_bot_token
+IA_CONFIG_FILE=/path/to/ia.ini
+```
+
+### 4. Run the bot
+
+```bash
+python main.py
+python main.py -v  # verbose logging
+```
 
 ## Installation
 
-Download the necessary Python packages using the command:
-```bash
-$ pip install -r ./requirements.txt
-```
+The bot supports both guild and user installs, and can be used in servers, DMs, and group DMs.
 
-When cloning this bot, ensure you follow the MIT license and give proper credits.
