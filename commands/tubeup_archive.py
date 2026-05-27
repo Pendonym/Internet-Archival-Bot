@@ -111,9 +111,10 @@ class TubeupArchive(commands.Cog):
             already_exists: bool = False
             ia_identifier: str | None = None
             rate_limited: bool = False
+            connection_error: bool = False
 
             async def _drain_stdout() -> None:
-                nonlocal archive_url, already_exists, ia_identifier, rate_limited
+                nonlocal archive_url, already_exists, ia_identifier, rate_limited, connection_error
                 buf = b""
                 while True:
                     chunk = await process.stdout.read(4096)
@@ -133,10 +134,12 @@ class TubeupArchive(commands.Cog):
                             already_exists = True
                         if "please reduce your request rate" in line.lower() or "appears to be spam" in line.lower():
                             rate_limited = True
+                        if "readtimeouterror" in line.lower() or ("connectionerror" in line.lower() and "archive.org" in line.lower()):
+                            connection_error = True
                         if archive_url is None:
-                            m = re.search(r"https://archive\.org/\S+", line)
+                            m = re.search(r"https://archive\.org/details/\S+", line)
                             if m:
-                                archive_url = m.group(0).rstrip(".,;)")
+                                archive_url = m.group(0).rstrip(".,;)'\"")
                         if ia_identifier is None:
                             m = re.search(r"(?:identifier|item):\s*([\w-]+)", line, re.IGNORECASE)
                             if m:
@@ -200,6 +203,20 @@ class TubeupArchive(commands.Cog):
                 if archive_url:
                     builder.add_field(name="Archive URL", value=archive_url)
                 final_embed = builder.set_timestamp().build()
+            elif connection_error:
+                final_embed = (
+                    EmbedBuilder(
+                        title="❌ Connection Error",
+                        description=(
+                            "Could not reach `archive.org` — the server timed out during the upload.\n"
+                            "This is a network issue with the host, not the video. Try again later."
+                        ),
+                        color=discord.Color.red(),
+                    )
+                    .add_field(name="Video", value=link)
+                    .set_timestamp()
+                    .build()
+                )
             elif rate_limited:
                 final_embed = (
                     EmbedBuilder(
