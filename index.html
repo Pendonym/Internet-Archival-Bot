@@ -41,6 +41,7 @@
       font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
       font-size: 14px;
       line-height: 1.5;
+      display: flex; flex-direction: column; min-height: 100vh;
     }
 
     a { color: #428bca; text-decoration: none; }
@@ -96,8 +97,6 @@
       padding: 0 10px; height: 100%; display: flex; align-items: center; text-decoration: none;
     }
     .sub-nav a:hover { color: #fff; text-decoration: none; }
-    .sub-nav a.add { color: #f09090; }
-    .sub-nav a.add:hover { color: #ffbbbb; }
 
     /* ── Feature Band ────────────────────────────────────── */
     .feature { background: #595959; padding: 12px 12px 15px; text-align: center; }
@@ -126,7 +125,7 @@
     .fb-btn:hover { background: #2a6496; color: #fff; text-decoration: none; }
 
     /* ── Main Content ────────────────────────────────────── */
-    .main-area { background: #fff; border-bottom: 1px solid #e5e5e5; }
+    .main-area { background: #fff; border-bottom: 1px solid #e5e5e5; flex: 1; }
     .main-wrap {
       max-width: 1160px; margin: 0 auto; padding: 18px 12px;
       display: grid; grid-template-columns: 200px 1fr 215px; gap: 0;
@@ -159,8 +158,6 @@
     .sr-select { border: 1px solid #aaa; border-right: none; padding: 4px 6px; background: #f0f0f0; font-size: 13px; height: 30px; color: #333; cursor: pointer; }
     .sr-input { flex: 1; border: 1px solid #aaa; padding: 4px 8px; font-size: 13px; color: #888; font-style: italic; height: 30px; background: #fff; }
     .sr-btn { background: #666; border: none; padding: 0 10px; height: 30px; display: flex; align-items: center; cursor: pointer; }
-    .search-adv { text-align: right; font-size: 12px; margin-bottom: 14px; }
-
     .col-c-body { border-top: 1px solid #e5e5e5; padding-top: 12px; font-size: 13px; color: #666; line-height: 1.65; }
 
     .col-r { padding-left: 14px; border-left: 1px solid #e5e5e5; }
@@ -295,7 +292,6 @@
       <a href="#commands">Commands</a>
       <a href="https://archive.org/details/@yt-dlp_bot" target="_blank" rel="noopener">Archive Account</a>
       <a href="https://github.com/Pendonym/Internet-Archival-Bot" target="_blank" rel="noopener">GitHub</a>
-      <a class="add" href="https://discord.com/oauth2/authorize?client_id=1508783480266293439" target="_blank" rel="noopener">Add to Discord ♥</a>
     </div>
   </nav>
 
@@ -404,10 +400,6 @@
             <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="2.5"><circle cx="9" cy="9" r="6"/><line x1="14" y1="14" x2="18" y2="18"/></svg>
           </div>
         </div>
-        <div class="search-adv">
-          <a href="https://discord.com/oauth2/authorize?client_id=1508783480266293439" target="_blank" rel="noopener">Add to Discord to get started</a>
-        </div>
-
         <div class="col-c-body" id="about">
           Internet Archival uses <a href="https://github.com/bibanon/tubeup">tubeup</a> &amp; yt-dlp for video,
           the <a href="https://web.archive.org/save">Save Page Now</a> API for web archiving,
@@ -430,16 +422,6 @@
           <li><a href="https://github.com/Pendonym/Internet-Archival-Bot">HTTP 401/429 handling for Wayback Machine</a></li>
         </ul>
         <a class="more-lnk" href="https://github.com/Pendonym/Internet-Archival-Bot" target="_blank" rel="noopener">More on GitHub &raquo;</a>
-
-        <h3>New to the Bot?</h3>
-        <ul>
-          <li><a href="#web-archive">/web-archive link: &lt;url&gt;</a></li>
-          <li><a href="#video-archive">/tubeup-archive link: &lt;url&gt;</a></li>
-          <li><a href="#git-archive">/git-archive link: &lt;url&gt;</a></li>
-          <li><a href="#wiki-archive">/wiki-archive link: &lt;url&gt;</a></li>
-          <li><a href="#ping">/ping</a></li>
-        </ul>
-        <a class="more-lnk" href="https://archive.org/details/@yt-dlp_bot" target="_blank" rel="noopener">View Archives &raquo;</a>
       </div>
 
     </div>
@@ -508,4 +490,3 @@
 
 </body>
 </html>
-
