@@ -101,6 +101,7 @@ class TubeupArchive(commands.Cog):
                     *([f"--cookies={_cookies}"] if _cookies else []),
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.STDOUT,
+                    env={**os.environ, "PYTHONIOENCODING": "utf-8"},
                 )
             except FileNotFoundError:
                 err_embed = (
