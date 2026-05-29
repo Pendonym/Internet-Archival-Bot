@@ -165,6 +165,8 @@ class WebArchive(commands.Cog):
             status_text = "pending"
             archive_url: str | None = None
             screenshot_url: str | None = None
+            outlink_count: int | None = None
+            embed_count: int | None = None
 
             for attempt in range(_MAX_POLLS):
                 await asyncio.sleep(_POLL_INTERVAL)
@@ -187,6 +189,9 @@ class WebArchive(commands.Cog):
                         archive_url = f"https://web.archive.org/web/{timestamp}/{original}"
                         if screenshot:
                             screenshot_url = f"https://web.archive.org/web/{timestamp}/http://web.archive.org/screenshot/{original}"
+                    counters = data.get("counters", {})
+                    outlink_count = counters.get("outlinks")
+                    embed_count = counters.get("embeds")
                     break
 
                 if status_text == "error":
@@ -220,6 +225,13 @@ class WebArchive(commands.Cog):
                 builder.add_field(name="Archive URL", value=archive_url)
             if screenshot_url:
                 builder.add_field(name="Screenshot", value=screenshot_url)
+            if outlinks and (outlink_count is not None or embed_count is not None):
+                parts: list[str] = []
+                if outlink_count is not None:
+                    parts.append(f"{outlink_count} outlink{'s' if outlink_count != 1 else ''}")
+                if embed_count is not None:
+                    parts.append(f"{embed_count} embed{'s' if embed_count != 1 else ''}")
+                builder.add_field(name="Resources Captured", value=", ".join(parts))
             final_embed = builder.set_timestamp().build()
 
         elif status_text == "error":
