@@ -127,16 +127,50 @@ class WebArchive(commands.Cog):
                     body = await resp.text()
                     if verbose:
                         logging.debug("[web-archive] SPN submit failed: HTTP %s — %s", resp.status, body)
-                    await msg.edit(
-                        embed=EmbedBuilder(
-                            title="❌ Archive Failed",
-                            description=f"Save Page Now rejected the request (HTTP {resp.status}).",
-                            color=discord.Color.red(),
+                    try:
+                        err_payload = await resp.json(content_type=None)
+                        api_message: str | None = err_payload.get("message")
+                    except Exception:
+                        api_message = None
+                    if resp.status == 401:
+                        description = api_message or "Internet Archive credentials are invalid or expired."
+                        await msg.edit(
+                            embed=EmbedBuilder(
+                                title="❌ Unauthorized",
+                                description=(
+                                    f"{description}\n"
+                                    "Re-run `ia configure` or check your keys at https://archive.org/account/s3.php"
+                                ),
+                                color=discord.Color.red(),
+                            )
+                            .add_field(name="URL", value=link)
+                            .set_timestamp()
+                            .build()
                         )
-                        .add_field(name="URL", value=link)
-                        .set_timestamp()
-                        .build()
-                    )
+                    elif resp.status == 429:
+                        description = api_message or "You have too many active Save Page Now sessions. Wait a moment and try again."
+                        await msg.edit(
+                            embed=EmbedBuilder(
+                                title="⏳ Rate Limited",
+                                description=description,
+                                color=discord.Color.orange(),
+                            )
+                            .add_field(name="URL", value=link)
+                            .set_timestamp()
+                            .build()
+                        )
+                    else:
+                        description = api_message or f"Save Page Now rejected the request (HTTP {resp.status})."
+                        await msg.edit(
+                            embed=EmbedBuilder(
+                                title="❌ Archive Failed",
+                                description=description,
+                                color=discord.Color.red(),
+                            )
+                            .add_field(name="URL", value=link)
+                            .set_timestamp()
+                            .build()
+                        )
                     return
 
                 payload = await resp.json(content_type=None)
