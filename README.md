@@ -10,6 +10,7 @@ A Discord bot for archiving content to the [Internet Archive](https://archive.or
 | `/git-archive link: [all_files:] [include_wiki:] [all_releases:] [all_branches:]` | Archive a git repository via [iagitbetter](https://github.com/Andres9890/iagitbetter) |
 | `/tubeup-archive link:` | Archive a video (YouTube or any yt-dlp source) via [tubeup](https://github.com/bibanon/tubeup) |
 | `/web-archive link: [outlinks:] [error_pages:] [screenshot:] [disable_adblocker:] [my_web_archive:]` | Save a web page to the Wayback Machine via Save Page Now |
+| `/wiki-archive link: [wiki_type:]` | Archive a wiki (MediaWiki, DokuWiki, PukiWiki) via [wikiteam3](https://github.com/saveweb/wikiteam3) / [dokuwiki-dumper](https://github.com/saveweb/dokuwiki-dumper) / [pukiwiki-dumper](https://github.com/saveweb/pukiwiki-dumper) |
 
 ## Setup
 

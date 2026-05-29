@@ -131,6 +131,7 @@ class TubeupArchive(commands.Cog):
             total_count: int = 0
             rate_limited: bool = False
             connection_error: bool = False
+            _url_queue: asyncio.Queue[str] = asyncio.Queue()
 
             async def _drain_stdout() -> None:
                 nonlocal already_exists_count, ia_identifier, error_count, total_count, rate_limited, connection_error
@@ -165,6 +166,8 @@ class TubeupArchive(commands.Cog):
                             url = m.group(0).rstrip(".,;)'\"")
                             if url not in archived_urls:
                                 archived_urls.append(url)
+                                if is_multi:
+                                    await _url_queue.put(url)
                         if ia_identifier is None:
                             m = re.search(r"(?:identifier|item):\s*([\w-]+)", line, re.IGNORECASE)
                             if m:
@@ -174,17 +177,10 @@ class TubeupArchive(commands.Cog):
                 while True:
                     await asyncio.sleep(15)
                     try:
-                        count = len(archived_urls)
-                        if is_multi and count > 0:
-                            desc = f"Archived {count} item{'s' if count != 1 else ''} so far..."
-                        elif is_multi:
-                            desc = f"{link_label} is being preserved..."
-                        else:
-                            desc = "Video is being preserved..."
                         await msg.edit(
                             embed=EmbedBuilder(
                                 title=f"Archiving {link_label}...",
-                                description=desc,
+                                description="Video is being preserved...",
                                 color=discord.Color.yellow(),
                             )
                             .set_timestamp()
@@ -193,12 +189,45 @@ class TubeupArchive(commands.Cog):
                     except Exception:
                         pass
 
+            async def _progress_notifier() -> None:
+                use_dm = False
+                while True:
+                    try:
+                        new_url = await asyncio.wait_for(_url_queue.get(), timeout=60)
+                    except asyncio.TimeoutError:
+                        continue
+                    except asyncio.CancelledError:
+                        return
+                    count = len(archived_urls)
+                    embed = (
+                        EmbedBuilder(
+                            title=f"Archiving {link_label}...",
+                            description=(
+                                f"Archived **{count}** item{'s' if count != 1 else ''} so far...\n"
+                                f"Latest: {new_url}"
+                            ),
+                            color=discord.Color.yellow(),
+                        )
+                        .set_timestamp()
+                        .build()
+                    )
+                    if not use_dm:
+                        try:
+                            await msg.edit(embed=embed)
+                            continue
+                        except discord.HTTPException:
+                            use_dm = True
+                    try:
+                        await interaction.user.send(embed=embed)
+                    except discord.HTTPException:
+                        pass
+
             drain_task = asyncio.create_task(_drain_stdout())
-            heartbeat_task = asyncio.create_task(_heartbeat())
+            update_task = asyncio.create_task(_progress_notifier() if is_multi else _heartbeat())
             try:
                 await drain_task
             finally:
-                heartbeat_task.cancel()
+                update_task.cancel()
 
             await process.wait()
 
