@@ -36,15 +36,15 @@ module.exports = {
 
             if (includewiki) {
                 console.log(`include wiki yes`)
-                command.concat("--include-wiki")
+                command.push("--include-wiki")
             }
             if (allreleases) {
                 console.log(`include release yes`)
-                command.concat("--include-wiki")
+                command.push("--include-wiki")
             }
             if (allbranches) {
                 console.log(`include branch yes`)
-                command.concat("--include-wiki")
+                command.push("--include-wiki")
             }
 
             return new Promise((resolve, reject) => {
@@ -57,7 +57,7 @@ module.exports = {
                         console.log(`error: ${stderr}`)
                         return reject(stderr)
                     }
-                    interaction.reply({ content: 'Archived prolly', withResponse: true });
+                    interaction.editReply(`Archived prolly`);
                     console.log(stdout);
                     resolve(stdout);
                 });
