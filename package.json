@@ -1,0 +1,23 @@
+{
+  "name": "archive-clanker-rewrite",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node --env-file=.env main.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "discord.js": "^14.26.4",
+    "dotenv": "^17.4.2",
+    "glob": "^13.0.6",
+    "glob-bin": "^1.1.0",
+    "youtube-dl-exec": "^3.1.8"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.6.0"
+  }
+}
