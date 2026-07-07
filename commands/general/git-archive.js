@@ -78,5 +78,11 @@ module.exports = {
         }
 
         uploadArchive()
+			.then((value) => {
+			    console.log(value);
+			})
+			.catch((err) => {
+			    console.error("bad stuf (part 2):",err);
+			});
     },
 };
