@@ -55,6 +55,7 @@ module.exports = {
 	            }
 	
 	            return new Promise((resolve, reject) => {
+                    console.log(command)
 	                execFile('iagitbetter', command, (error, stdout, stderr) => {
 	                    if (error) {
 	                        console.log(`node error: ${error.message}`);
@@ -64,9 +65,11 @@ module.exports = {
 	                        console.log(`error: ${stderr}`)
 	                        return reject(stderr)
 	                    }
-	                    interaction.editReply(`Archived prolly`);
-	                    console.log(stdout);
-	                    resolve(stdout);
+	                    if (stdout) {
+                            interaction.editReply(`Archived prolly`);
+                            console.log(stdout);
+                            resolve(stdout);
+                        }
 	                });
 	            });
 			}
