@@ -35,36 +35,46 @@ module.exports = {
         const sent = await interaction.reply({ content: 'Sending request...', withResponse: true });
 
         function uploadArchive() {
-            const command = [ url ];
+            ///lily
+			try
+			{
+				///pendonym
+				const command = [ url ];
 
-            if (includewiki) {
-                console.log(`include wiki yes`)
-                command.push("--include-wiki")
-            }
-            if (allreleases) {
-                console.log(`include release yes`)
-                command.push("--include-wiki")
-            }
-            if (allbranches) {
-                console.log(`include branch yes`)
-                command.push("--include-wiki")
-            }
+	            if (includewiki) {
+	                console.log(`include wiki yes`)
+	                command.push("--include-wiki")
+	            }
+	            if (allreleases) {
+	                console.log(`include release yes`)
+	                command.push("--include-wiki")
+	            }
+	            if (allbranches) {
+	                console.log(`include branch yes`)
+	                command.push("--include-wiki")
+	            }
+	
+	            return new Promise((resolve, reject) => {
+	                execFile('iagitbetter', command, (error, stdout, stderr) => {
+	                    if (error) {
+	                        console.log(`node error: ${error.message}`);
+	                        return reject(error);
+	                    }
+	                    if (stderr) {
+	                        console.log(`error: ${stderr}`)
+	                        return reject(stderr)
+	                    }
+	                    interaction.editReply(`Archived prolly`);
+	                    console.log(stdout);
+	                    resolve(stdout);
+	                });
+	            });
+			}
 
-            return new Promise((resolve, reject) => {
-                execFile('iagitbetter', command, (error, stdout, stderr) => {
-                    if (error) {
-                        console.log(`node error: ${error.message}`);
-                        return reject(error);
-                    }
-                    if (stderr) {
-                        console.log(`error: ${stderr}`)
-                        return reject(stderr)
-                    }
-                    interaction.editReply(`Archived prolly`);
-                    console.log(stdout);
-                    resolve(stdout);
-                });
-            });
+			catch (err)
+			{
+				console.log("bad stuf:", err);
+			}
         }
 
         uploadArchive()
