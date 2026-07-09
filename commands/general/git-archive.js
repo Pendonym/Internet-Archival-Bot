@@ -58,18 +58,21 @@ module.exports = {
                     console.log(command)
 	                execFile('iagitbetter', command, (error, stdout, stderr) => {
 	                    if (error) {
+                            interaction.editReply(`Archived prolly error`);
 	                        console.log(`node error: ${error.message}`);
 	                        return reject(error);
 	                    }
 	                    if (stderr) {
+                            interaction.editReply(`Archived prolly stderr`);
 	                        console.log(`error: ${stderr}`)
 	                        return reject(stderr)
 	                    }
 	                    if (stdout) {
-                            interaction.editReply(`Archived prolly`);
+                            interaction.editReply(`Archived prolly stdout`);
                             console.log(stdout);
                             resolve(stdout);
                         }
+                        interaction.editReply(`Archived prolly none of those 3`);
 	                });
 	            });
 			}

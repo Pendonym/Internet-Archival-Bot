@@ -1,6 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { exec, execFile } = require("child_process");
 const { glob } = require('glob')
+const fs = require('node:fs');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -42,18 +43,38 @@ module.exports = {
 
         function uploadArchive(files) {
             return new Promise((resolve, reject) => {
-                execFile('ia', [
-                    'upload', `temp-u9032j3`,
-                    ...files,
-                    '-m', 'title:Test Upload For YouTube Bot',
-                    '-m', 'collection:test_collection'
-                ], (error, stdout, stderr) => {
-                    if (error) {
-                        console.log(`node error: ${error.message}`);
-                        return reject(error);
+                const data = fs.readFile(`${getYouTubeId(url)}.info.json`, 'utf8', (err, blahdata) => {
+                    if (err) {
+                        console.error(err);
+                        return;
                     }
-                    console.log(stdout);
-                    resolve(stdout);
+
+                    const jsonData = JSON.parse(blahdata);
+                    const metaTags = `${jsonData.tags.join(`;`)}`
+                    const dateYear = jsonData.upload_date.slice(0,4);
+                    const dateDay = jsonData.upload_date.slice(4,6);
+                    const dateMonth = jsonData.upload_date.slice(6,8);
+
+                    execFile('ia', [
+                        'upload', `youtube-${getYouTubeId(url)}`,
+                        ...files,
+                        '-m', `title:${jsonData.title}`,
+                        '-m', `description:${jsonData.description || `Description was not provided in this video. While you're here try out the bot that uploaded this video at https://internet-archival.xyz`}`,
+                        '-m', `subject:Youtube;video;${metaTags}`   ,
+                        '-m', 'collection:opensource_movies',
+                        '-m', 'scanner:TubeUp Video Stream Mirroring Application 2026.5.8',
+                        '-m', `channel:${jsonData.channel_url}`,
+                        '-m', `originalurl:${jsonData.webpage_url}`,
+                        '-m', `year:${dateYear}`,
+                        '-m', `date:${dateYear}-${dateMonth}-${dateDay}`
+                    ], (error, stdout, stderr) => {
+                        if (error) {
+                            console.log(`node error: ${error.message}`);
+                            return reject(error);
+                        }
+                        console.log(stdout);
+                        resolve(stdout);
+                    });
                 });
             });
         }
@@ -72,8 +93,8 @@ module.exports = {
                 execFile('yt-dlp', [
                     '--restrict-filenames', '--continue', '--retries', '9001',
                     '--fragment-retries', '9001', '--write-info-json', '--write-description',
-                    '--write-thumbnail', '--all-subs', '--ignore-errors', '--fixup', 'detect_or_warn',
-                    '--no-overwrites', '--no-update', '-o', '%(id)s.%(ext)s', video
+                    '--write-thumbnail', '--write-subs', '--all-subs', '--ignore-errors', '--fixup',
+                    'detect_or_warn', '--no-overwrites', '--no-update', '-o', '%(id)s.%(ext)s', video
                 ], async (error, stdout, stderr) => {
                     if (error) {
                         console.log(`node error: ${error.message}`);
@@ -87,7 +108,7 @@ module.exports = {
                     try {
                         const files = await glob(`${getYouTubeId(url)}.*`);
                         await uploadArchive(files);
-                        await interaction.editReply(`Uploaded! https://archive.org/details/test-${getYouTubeId(url)}`);
+                        await interaction.editReply(`Uploaded! https://archive.org/details/youtube-${getYouTubeId(url)}`);
                     } catch (err) {
                         console.log(`upload failed: ${err.message}`);
                         await interaction.editReply('Upload failed.');
