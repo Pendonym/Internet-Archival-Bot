@@ -80,14 +80,6 @@ module.exports = {
                         }
                         resolve(stdout);
                     });
-
-                    fs.rmdir(`E:\\Videos\\youtube-${getYouTubeId(url)}`, (err, data) => {
-                        if (err) {
-                            console.log(err);
-                        } else if (data) {
-                            console.log(data);
-                        };
-                    })
                 });
             });
         }
@@ -120,7 +112,13 @@ module.exports = {
                     await interaction.editReply(`Downloaded now uploading...`);
                     try {
                         const files = await glob(`E:/Videos/youtube-${getYouTubeId(url)}/${getYouTubeId(url)}.*`);
-                        await uploadArchive(files);
+                        await uploadArchive(files).then(() => fs.rm(`E:\\Videos\\youtube-${getYouTubeId(url)}`, { recursive: true }, (err, data) => {
+                        if (err) {
+                            console.log(err);
+                        } else if (data) {
+                            console.log(data);
+                        };
+                    }));
                         await interaction.editReply(`Uploaded! https://archive.org/details/youtube-${getYouTubeId(url)}`);
                     } catch (err) {
                         console.log(`upload failed: ${err.message}`);
