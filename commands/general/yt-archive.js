@@ -29,7 +29,7 @@ module.exports = {
 
         function checkArchive() {
             return new Promise((resolve, reject) => {
-                exec(`ia metadata test7-${getYouTubeId(url)}`, (error, stdout, stderr) => {
+                exec(`ia metadata youtube-${getYouTubeId(url)}`, (error, stdout, stderr) => {
                     if (error) {
                         console.log(`node error: ${error}`);
                         return reject(error);
@@ -62,12 +62,12 @@ module.exports = {
                     };
 
                     execFile('ia', [
-                        'upload', `test7-${getYouTubeId(url)}`,
+                        'upload', `youtube-${getYouTubeId(url)}`,
                         ...files,
                         '-m', `title:${jsonData.title}`,
                         '-m', `description:${jsonData.description}`, //.replace(/\n/g, ' ') i dont think this is needed but im keeping it here just incase
                         '-m', `subject:Youtube;video;${metaTags}`,
-                        '-m', 'collection:test_collection', // opensource_movies and test_collection
+                        '-m', 'collection:opensource_movies', // opensource_movies and test_collection
                         '-m', 'scanner:TubeUp Video Stream Mirroring Application 2026.5.8',
                         '-m', `channel:${jsonData.channel_url}`,
                         '-m', `originalurl:${jsonData.webpage_url}`,
@@ -80,6 +80,14 @@ module.exports = {
                         }
                         resolve(stdout);
                     });
+
+                    fs.rmdir(`E:\\Videos\\youtube-${getYouTubeId(url)}`, (err, data) => {
+                        if (err) {
+                            console.log(err);
+                        } else if (data) {
+                            console.log(data);
+                        };
+                    })
                 });
             });
         }
@@ -113,7 +121,7 @@ module.exports = {
                     try {
                         const files = await glob(`E:/Videos/youtube-${getYouTubeId(url)}/${getYouTubeId(url)}.*`);
                         await uploadArchive(files);
-                        await interaction.editReply(`Uploaded! https://archive.org/details/test7-${getYouTubeId(url)}`);
+                        await interaction.editReply(`Uploaded! https://archive.org/details/youtube-${getYouTubeId(url)}`);
                     } catch (err) {
                         console.log(`upload failed: ${err.message}`);
                         await interaction.editReply('Upload failed.');
