@@ -31,11 +31,11 @@ module.exports = {
             return new Promise((resolve, reject) => {
                 exec(`ia metadata test7-${getYouTubeId(url)}`, (error, stdout, stderr) => {
                     if (error) {
-                        console.log(`node error: ${error.message}`);
+                        console.log(`node error: ${error}`);
                         return reject(error);
                     }
                     if (stderr) {
-                        console.log(`error from my pc or sum`);
+                        console.log(`error from my pc or sum: ${stderr}`);
                         return reject(new Error(stderr));
                     }
                     resolve(stdout.length < 10);
@@ -45,15 +45,14 @@ module.exports = {
 
         function uploadArchive(files) {
             return new Promise((resolve, reject) => {
-                const data = fs.readFile(`E:\\Videos\\youtube-${getYouTubeId(url)}\\${getYouTubeId(url)}.info.json`, 'utf8', (err, blahdata) => {
+                fs.readFile(`E:\\Videos\\youtube-${getYouTubeId(url)}\\${getYouTubeId(url)}.info.json`, 'utf8', (err, data) => {
                     if (err) {
-                        console.error(err);
+                        console.error(`yo i broke: ${err}`);
                         return;
                     }
 
-                    const jsonData = JSON.parse(blahdata);
+                    const jsonData = JSON.parse(data);
                     const metaTags = `${jsonData.tags.join(`;`)}`;
-                    const fixedDescription = console.log(jsonData.description);
                     const dateYear = jsonData.upload_date.slice(0,4);
                     const dateDay = jsonData.upload_date.slice(4,6);
                     const dateMonth = jsonData.upload_date.slice(6,8);
@@ -63,17 +62,17 @@ module.exports = {
                     };
 
                     execFile('ia', [
-                        'upload', `youtube-${getYouTubeId(url)}`,
+                        'upload', `test7-${getYouTubeId(url)}`,
                         ...files,
                         '-m', `title:${jsonData.title}`,
-                        '-m', `description:${jsonData.description}`, //.replace(/\n/g, ' ')
+                        '-m', `description:${jsonData.description}`, //.replace(/\n/g, ' ') i dont think this is needed but im keeping it here just incase
                         '-m', `subject:Youtube;video;${metaTags}`,
-                        '-m', 'collection:opensource_movies', // opensource_movies and test_collection
+                        '-m', 'collection:test_collection', // opensource_movies and test_collection
                         '-m', 'scanner:TubeUp Video Stream Mirroring Application 2026.5.8',
                         '-m', `channel:${jsonData.channel_url}`,
                         '-m', `originalurl:${jsonData.webpage_url}`,
                         '-m', `year:${dateYear}`,
-                        '-m', `date:${dateYear}-${dateMonth}-${dateDay}`
+                        '-m', `date:${dateYear}-${dateDay}-${dateMonth}`
                     ], (error, stdout, stderr) => {
                         if (error) {
                             console.log(`node error: ${error}`);
@@ -90,7 +89,7 @@ module.exports = {
             try {
                 isNotArchived = await checkArchive();
             } catch (err) {
-                console.log(`shit broke in checkarchive gng: ${err.message}`);
+                console.log(`shit broke in checkarchive gng: ${err}`);
                 return;
             }
 
@@ -114,7 +113,7 @@ module.exports = {
                     try {
                         const files = await glob(`E:/Videos/youtube-${getYouTubeId(url)}/${getYouTubeId(url)}.*`);
                         await uploadArchive(files);
-                        await interaction.editReply(`Uploaded! https://archive.org/details/youtube-${getYouTubeId(url)}`);
+                        await interaction.editReply(`Uploaded! https://archive.org/details/test7-${getYouTubeId(url)}`);
                     } catch (err) {
                         console.log(`upload failed: ${err.message}`);
                         await interaction.editReply('Upload failed.');

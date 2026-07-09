@@ -1,6 +1,7 @@
 // apparently these are the issues for the crash (thank you vad for lmk but i have zero clue how to implement)
 //- git logs sometimes hit 1mb+, pass { maxBuffer: 1024 * 1024 * 50 } with execFile
 //- await and trycatch uploadArchive cause if any functions fail inside it, the process gets termed
+//- you should listen to stderr and use the trycatch's catch() part. you can write catch(error) and then inside the catch you can print the error to stdout
 const { SlashCommandBuilder } = require('discord.js');
 const { exec, execFile } = require("child_process");
 const { glob } = require('glob')
