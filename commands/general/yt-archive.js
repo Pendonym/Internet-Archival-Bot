@@ -2,6 +2,7 @@ const { SlashCommandBuilder } = require('discord.js');
 const { exec, execFile } = require("child_process");
 const { glob } = require('glob')
 const fs = require('node:fs');
+const { json } = require('node:stream/consumers');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -14,6 +15,8 @@ module.exports = {
 
         if (!/^https?:\/\//i.test(url)) {
             return interaction.reply('Please provide a valid URL.');
+        } else if (/[?&]list=/.test(url) | /\/(channel\/|c\/|@)/.test(url)) {
+            return interaction.reply('Playlists and channels are currently not supported if you would like to help me cook that up you can go to https://github.com/Pendonym/Internet-Archival-Bot.');
         }
 
         const sent = await interaction.reply({ content: 'Sending request...', withResponse: true });
@@ -26,7 +29,7 @@ module.exports = {
 
         function checkArchive() {
             return new Promise((resolve, reject) => {
-                exec(`ia metadata youtube-${getYouTubeId(url)}`, (error, stdout, stderr) => {
+                exec(`ia metadata test7-${getYouTubeId(url)}`, (error, stdout, stderr) => {
                     if (error) {
                         console.log(`node error: ${error.message}`);
                         return reject(error);
@@ -35,7 +38,6 @@ module.exports = {
                         console.log(`error from my pc or sum`);
                         return reject(new Error(stderr));
                     }
-                    console.log(stdout.length);
                     resolve(stdout.length < 10);
                 });
             });
@@ -43,25 +45,30 @@ module.exports = {
 
         function uploadArchive(files) {
             return new Promise((resolve, reject) => {
-                const data = fs.readFile(`${getYouTubeId(url)}.info.json`, 'utf8', (err, blahdata) => {
+                const data = fs.readFile(`E:\\Videos\\youtube-${getYouTubeId(url)}\\${getYouTubeId(url)}.info.json`, 'utf8', (err, blahdata) => {
                     if (err) {
                         console.error(err);
                         return;
                     }
 
                     const jsonData = JSON.parse(blahdata);
-                    const metaTags = `${jsonData.tags.join(`;`)}`
+                    const metaTags = `${jsonData.tags.join(`;`)}`;
+                    const fixedDescription = console.log(jsonData.description);
                     const dateYear = jsonData.upload_date.slice(0,4);
                     const dateDay = jsonData.upload_date.slice(4,6);
                     const dateMonth = jsonData.upload_date.slice(6,8);
+
+                    if (jsonData.description === "") {
+                        jsonData.description = "Description was not provided in this video. While you're here try out the bot that uploaded this video at https://internet-archival.xyz";
+                    };
 
                     execFile('ia', [
                         'upload', `youtube-${getYouTubeId(url)}`,
                         ...files,
                         '-m', `title:${jsonData.title}`,
-                        '-m', `description:${jsonData.description || `Description was not provided in this video. While you're here try out the bot that uploaded this video at https://internet-archival.xyz`}`,
-                        '-m', `subject:Youtube;video;${metaTags}`   ,
-                        '-m', 'collection:opensource_movies',
+                        '-m', `description:${jsonData.description}`, //.replace(/\n/g, ' ')
+                        '-m', `subject:Youtube;video;${metaTags}`,
+                        '-m', 'collection:opensource_movies', // opensource_movies and test_collection
                         '-m', 'scanner:TubeUp Video Stream Mirroring Application 2026.5.8',
                         '-m', `channel:${jsonData.channel_url}`,
                         '-m', `originalurl:${jsonData.webpage_url}`,
@@ -69,10 +76,9 @@ module.exports = {
                         '-m', `date:${dateYear}-${dateMonth}-${dateDay}`
                     ], (error, stdout, stderr) => {
                         if (error) {
-                            console.log(`node error: ${error.message}`);
+                            console.log(`node error: ${error}`);
                             return reject(error);
                         }
-                        console.log(stdout);
                         resolve(stdout);
                     });
                 });
@@ -94,7 +100,7 @@ module.exports = {
                     '--restrict-filenames', '--continue', '--retries', '9001',
                     '--fragment-retries', '9001', '--write-info-json', '--write-description',
                     '--write-thumbnail', '--write-subs', '--all-subs', '--ignore-errors', '--fixup',
-                    'detect_or_warn', '--no-overwrites', '--no-update', '-o', '%(id)s.%(ext)s', video
+                    'detect_or_warn', '--no-overwrites', '--no-update', '-o', `E:\\Videos\\youtube-${getYouTubeId(url)}\\%(id)s.%(ext)s`, video
                 ], async (error, stdout, stderr) => {
                     if (error) {
                         console.log(`node error: ${error.message}`);
@@ -106,7 +112,7 @@ module.exports = {
                     }
                     await interaction.editReply(`Downloaded now uploading...`);
                     try {
-                        const files = await glob(`${getYouTubeId(url)}.*`);
+                        const files = await glob(`E:/Videos/youtube-${getYouTubeId(url)}/${getYouTubeId(url)}.*`);
                         await uploadArchive(files);
                         await interaction.editReply(`Uploaded! https://archive.org/details/youtube-${getYouTubeId(url)}`);
                     } catch (err) {
