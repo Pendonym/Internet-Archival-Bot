@@ -65,12 +65,13 @@ module.exports = {
                         'upload', `youtube-${getYouTubeId(url)}`,
                         ...files,
                         '-m', `title:${jsonData.title}`,
-                        '-m', `description:${jsonData.description}`, //.replace(/\n/g, ' ') i dont think this is needed but im keeping it here just incase
+                        '-m', `description:${jsonData.description}`,
                         '-m', `subject:Youtube;video;${metaTags}`,
                         '-m', 'collection:opensource_movies', // opensource_movies and test_collection
                         '-m', 'scanner:TubeUp Video Stream Mirroring Application 2026.5.8',
                         '-m', `channel:${jsonData.channel_url}`,
                         '-m', `originalurl:${jsonData.webpage_url}`,
+                        '-m', `creator:${jsonData.uploader}`,
                         '-m', `year:${dateYear}`,
                         '-m', `date:${dateYear}-${dateDay}-${dateMonth}`
                     ], (error, stdout, stderr) => {
@@ -94,7 +95,7 @@ module.exports = {
             }
 
             if (isNotArchived) {
-                await interaction.editReply(`Downloading...`);
+                await interaction.followUp(`Downloading...`);
                 execFile('yt-dlp', [
                     '--restrict-filenames', '--continue', '--retries', '9001',
                     '--fragment-retries', '9001', '--write-info-json', '--write-description',
