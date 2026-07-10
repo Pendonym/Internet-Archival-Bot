@@ -111,7 +111,7 @@ module.exports = {
                     }
                     await interaction.followUp(`Downloaded now uploading...`);
                     try {
-                        const files = await glob(`E:/Videos/youtube-${getYouTubeId(url)}/${getYouTubeId(url)}.*`);
+                        const files = await glob(`${process.env.DOWNLOAD_PATH}/youtube-${getYouTubeId(url)}/${getYouTubeId(url)}.*`);
                         await uploadArchive(files).then(() => fs.rm(`${process.env.DOWNLOAD_PATH}/youtube-${getYouTubeId(url)}`, { recursive: true }, (err, data) => {
                         if (err) {
                             console.log(err);
