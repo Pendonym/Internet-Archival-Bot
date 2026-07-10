@@ -19,7 +19,7 @@ module.exports = {
             return interaction.reply('Playlists and channels are currently not supported if you would like to help me cook that up you can go to https://github.com/Pendonym/Internet-Archival-Bot.');
         }
 
-        const sent = await interaction.reply({ content: 'Sending request...', withResponse: true });
+        await interaction.reply({ content: 'Sending request...', withResponse: true });
 
         function getYouTubeId(url) {
             const regex = /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
@@ -45,7 +45,7 @@ module.exports = {
 
         function uploadArchive(files) {
             return new Promise((resolve, reject) => {
-                fs.readFile(`E:\\Videos\\youtube-${getYouTubeId(url)}\\${getYouTubeId(url)}.info.json`, 'utf8', (err, data) => {
+                fs.readFile(`${process.env.DOWNLOAD_PATH}/youtube-${getYouTubeId(url)}/${getYouTubeId(url)}.info.json`, 'utf8', (err, data) => {
                     if (err) {
                         console.error(`yo i broke: ${err}`);
                         return;
@@ -99,7 +99,7 @@ module.exports = {
                     '--restrict-filenames', '--continue', '--retries', '9001',
                     '--fragment-retries', '9001', '--write-info-json', '--write-description',
                     '--write-thumbnail', '--write-subs', '--all-subs', '--ignore-errors', '--fixup',
-                    'detect_or_warn', '--no-overwrites', '--no-update', '-o', `E:\\Videos\\youtube-${getYouTubeId(url)}\\%(id)s.%(ext)s`, video
+                    'detect_or_warn', '--no-overwrites', '--no-update', '-o', `${process.env.DOWNLOAD_PATH}/youtube-${getYouTubeId(url)}/%(id)s.%(ext)s`, video
                 ], async (error, stdout, stderr) => {
                     if (error) {
                         console.log(`node error: ${error.message}`);
@@ -109,20 +109,20 @@ module.exports = {
                         console.log(`error from my pc or sum: ${stderr}`);
                         return;
                     }
-                    await interaction.editReply(`Downloaded now uploading...`);
+                    await interaction.followUp(`Downloaded now uploading...`);
                     try {
                         const files = await glob(`E:/Videos/youtube-${getYouTubeId(url)}/${getYouTubeId(url)}.*`);
-                        await uploadArchive(files).then(() => fs.rm(`E:\\Videos\\youtube-${getYouTubeId(url)}`, { recursive: true }, (err, data) => {
+                        await uploadArchive(files).then(() => fs.rm(`${process.env.DOWNLOAD_PATH}/youtube-${getYouTubeId(url)}`, { recursive: true }, (err, data) => {
                         if (err) {
                             console.log(err);
                         } else if (data) {
                             console.log(data);
                         };
                     }));
-                        await interaction.editReply(`Uploaded! https://archive.org/details/youtube-${getYouTubeId(url)}`);
+                        await interaction.followUp(`Uploaded! https://archive.org/details/youtube-${getYouTubeId(url)}`);
                     } catch (err) {
                         console.log(`upload failed: ${err.message}`);
-                        await interaction.editReply('Upload failed.');
+                        await interaction.followUp('Upload failed.');
                     }
                 });
             } else {
