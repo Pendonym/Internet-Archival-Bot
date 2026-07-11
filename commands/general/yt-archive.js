@@ -72,6 +72,7 @@ module.exports = {
                         '-m', `channel:${jsonData.channel_url}`,
                         '-m', `originalurl:${jsonData.webpage_url}`,
                         '-m', `creator:${jsonData.uploader}`,
+                        '-m', "mediatype:movies",
                         '-m', `year:${dateYear}`,
                         '-m', `date:${dateYear}-${dateDay}-${dateMonth}`
                     ], (error, stdout, stderr) => {
