@@ -14,7 +14,7 @@ module.exports = {
         const url = interaction.options.getString('link');
 
         if (!/^https?:\/\//i.test(url)) {
-            return interaction.reply('Please provide a valid URL.');
+            return interaction.reply('Please provide a valid YouTube URL.');
         } else if (/[?&]list=/.test(url) | /\/(channel\/|c\/|@)/.test(url)) {
             return interaction.reply('Playlists and channels are currently not supported if you would like to help me cook that up you can go to https://github.com/Pendonym/Internet-Archival-Bot.');
         }
