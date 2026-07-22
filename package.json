@@ -7,7 +7,7 @@
     "start": "node --env-file=.env main.js"
   },
   "keywords": [],
-  "author": "",
+  "author": "Pendonym",
   "license": "ISC",
   "dependencies": {
     "discord.js": "^14.26.4",
