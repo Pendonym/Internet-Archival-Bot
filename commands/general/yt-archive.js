@@ -1,3 +1,7 @@
+// todo
+// add progress bar for upload (prob download too)
+// add a retry mechanism if the upload fails
+
 const { SlashCommandBuilder } = require('discord.js');
 const { exec, execFile } = require("child_process");
 const { glob } = require('glob')
@@ -96,7 +100,7 @@ module.exports = {
             }
 
             if (isNotArchived) {
-                await interaction.followUp(`Downloading...`);
+                await interaction.editReply(`Downloading...`);
                 execFile('yt-dlp', [
                     '--restrict-filenames', '--continue', '--retries', '9001',
                     '--fragment-retries', '9001', '--write-info-json', '--write-description',
