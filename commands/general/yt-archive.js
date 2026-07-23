@@ -102,10 +102,10 @@ module.exports = {
             if (isNotArchived) {
                 await interaction.editReply(`Downloading...`);
                 execFile('yt-dlp', [
-                    '--restrict-filenames', '--continue', '--retries', '9001',
-                    '--fragment-retries', '9001', '--write-info-json', '--write-description',
-                    '--write-thumbnail', '--write-subs', '--all-subs', '--ignore-errors', '--fixup',
-                    'detect_or_warn', '--no-overwrites', '--no-update', '-o', `${process.env.DOWNLOAD_PATH}/youtube-${getYouTubeId(url)}/%(id)s.%(ext)s`, video
+                    '--restrict-filenames', '--continue', '--retries', '9001', '--js-runtimes', 'deno',
+                    '--fragment-retries', '9001', '--write-info-json', '--write-description', '--cookies', `${process.env.COOKIE_PATH}`,
+                    '--write-thumbnail', '--write-subs', '--all-subs', '--ignore-errors', '--fixup', 'detect_or_warn', '--remote-components', 'ejs:github',
+                    '--no-overwrites', '--no-update', '-o', `${process.env.DOWNLOAD_PATH}/youtube-${getYouTubeId(url)}/%(id)s.%(ext)s`, video
                 ], async (error, stdout, stderr) => {
                     if (error) {
                         console.log(`node error: ${error.message}`);
