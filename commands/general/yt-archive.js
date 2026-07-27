@@ -26,7 +26,7 @@ module.exports = {
         await interaction.reply({ content: 'Sending request...', withResponse: true });
 
         function getYouTubeId(url) {
-            const regex = /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+            const regex = /(?:(?:music\.)?youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/)|youtu\.be\/|yt\.be\/)([a-zA-Z0-9_-]{11})/;
             const match = url.match(regex);
             return match ? match[1] : null;
         }
