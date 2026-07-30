@@ -1,4 +1,7 @@
 // todo: have a trace id, log everything to the trace id folder, never delete trace id folder, lookup command for trace id
+// add progress bar for upload (prob download too)
+// add a retry mechanism if the upload fails
+
 const { SlashCommandBuilder } = require('discord.js');
 const { exec, execFile } = require("child_process");
 const { glob } = require('glob')
@@ -23,6 +26,7 @@ module.exports = {
         await interaction.reply({ content: 'Sending request...', withResponse: true });
 
         function getYouTubeId(url) {
+            const regex = /(?:(?:music\.)?youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/)|youtu\.be\/|yt\.be\/)([a-zA-Z0-9_-]{11})/;
             const regex = /(?:(?:music\.)?youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/)|youtu\.be\/|yt\.be\/)([a-zA-Z0-9_-]{11})/;
             const match = url.match(regex);
             return match ? match[1] : null;
@@ -97,12 +101,16 @@ module.exports = {
             }
 
             if (isNotArchived) {
-                await interaction.followUp(`Downloading...`);
+                await interaction.editReply(`Downloading...`);
                 execFile('yt-dlp', [
                     '--restrict-filenames', '--continue', '--retries', '9001', '--js-runtimes', 'node',
                     '--fragment-retries', '9001', '--write-info-json', '--write-description', '--cookies', `${process.env.COOKIES_PATH}`,
                     '--write-thumbnail', '--write-subs', '--all-subs', '--ignore-errors', '--fixup',
                     'detect_or_warn', '--no-overwrites', '--no-update', '-o', `${process.env.DOWNLOAD_PATH}/youtube-${getYouTubeId(url)}/%(id)s.%(ext)s`, video
+                    '--restrict-filenames', '--continue', '--retries', '9001', '--js-runtimes', 'deno',
+                    '--fragment-retries', '9001', '--write-info-json', '--write-description', '--cookies', `${process.env.COOKIE_PATH}`,
+                    '--write-thumbnail', '--write-subs', '--all-subs', '--ignore-errors', '--fixup', 'detect_or_warn', '--remote-components', 'ejs:github',
+                    '--no-overwrites', '--no-update', '-o', `${process.env.DOWNLOAD_PATH}/youtube-${getYouTubeId(url)}/%(id)s.%(ext)s`, video
                 ], async (error, stdout, stderr) => {
                     if (error) {
                         console.log(`node error: ${error.message}`);
