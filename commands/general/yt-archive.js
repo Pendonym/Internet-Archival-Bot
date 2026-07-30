@@ -1,6 +1,7 @@
 // todo: have a trace id, log everything to the trace id folder, never delete trace id folder, lookup command for trace id
 // add progress bar for upload (prob download too)
 // add a retry mechanism if the upload fails
+// check if time has been over 15 minutes and respond with a new message instead of replying
 
 const { SlashCommandBuilder } = require('discord.js');
 const { exec, execFile } = require("child_process");
@@ -15,18 +16,20 @@ module.exports = {
         .addStringOption((option) => option.setName('link').setDescription('The URL to the YouTube video.').setRequired(true)),
 
     async execute(interaction) {
+        const genRanHex = size => [...Array(size)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
+        const hex = genRanHex(8);
+
         const url = interaction.options.getString('link');
 
         if (!/^https?:\/\//i.test(url)) {
-            return interaction.editReply('Please provide a valid YouTube URL.');
+            return interaction.editReply(`Please provide a valid YouTube URL.\n\n||Trace ID: ${hex}||`);
         } else if (/[?&]list=/.test(url) | /\/(channel\/|c\/|@)/.test(url)) {
-            return interaction.editReply('Playlists and channels are currently not supported if you would like to help me cook that up you can go to https://github.com/Pendonym/Internet-Archival-Bot.');
+            return interaction.editReply(`Playlists and channels are currently not supported if you would like to help me cook that up you can go to https://github.com/Pendonym/Internet-Archival-Bot.\n\n||Trace ID: ${hex}||`);
         }
 
-        await interaction.reply({ content: 'Sending request...', withResponse: true });
+        await interaction.reply({ content: `Sending request...\n\n||Trace ID: ${hex}||`, withResponse: true });
 
         function getYouTubeId(url) {
-            const regex = /(?:(?:music\.)?youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/)|youtu\.be\/|yt\.be\/)([a-zA-Z0-9_-]{11})/;
             const regex = /(?:(?:music\.)?youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/)|youtu\.be\/|yt\.be\/)([a-zA-Z0-9_-]{11})/;
             const match = url.match(regex);
             return match ? match[1] : null;
@@ -50,7 +53,7 @@ module.exports = {
 
         function uploadArchive(files) {
             return new Promise((resolve, reject) => {
-                fs.readFile(`${process.env.DOWNLOAD_PATH}/youtube-${getYouTubeId(url)}/${getYouTubeId(url)}.info.json`, 'utf8', (err, data) => {
+                fs.readFile(`${process.env.DOWNLOAD_PATH}/${hex}/youtube-${getYouTubeId(url)}/${getYouTubeId(url)}.info.json`, 'utf8', (err, data) => {
                     if (err) {
                         console.error(`yo i broke: ${err}`);
                         return;
@@ -72,7 +75,7 @@ module.exports = {
                         '-m', `title:${jsonData.title}`,
                         '-m', `description:${jsonData.description}`,
                         '-m', `subject:Youtube;video;${metaTags}`,
-                        '-m', 'collection:opensource_movies', // opensource_movies and test_collection
+                        '-m', 'collection:test_collection', // opensource_movies and test_collection
                         '-m', 'scanner:TubeUp Video Stream Mirroring Application 2026.5.8',
                         '-m', `channel:${jsonData.channel_url}`,
                         '-m', `originalurl:${jsonData.webpage_url}`,
@@ -101,16 +104,16 @@ module.exports = {
             }
 
             if (isNotArchived) {
-                await interaction.editReply(`Downloading...`);
+                await interaction.editReply(`Downloading...\n\n||Trace ID: ${hex}||`);
                 execFile('yt-dlp', [
                     '--restrict-filenames', '--continue', '--retries', '9001', '--js-runtimes', 'node',
                     '--fragment-retries', '9001', '--write-info-json', '--write-description', '--cookies', `${process.env.COOKIES_PATH}`,
                     '--write-thumbnail', '--write-subs', '--all-subs', '--ignore-errors', '--fixup',
-                    'detect_or_warn', '--no-overwrites', '--no-update', '-o', `${process.env.DOWNLOAD_PATH}/youtube-${getYouTubeId(url)}/%(id)s.%(ext)s`, video
+                    'detect_or_warn', '--no-overwrites', '--no-update', '-o', `${process.env.DOWNLOAD_PATH}/${hex}/youtube-${getYouTubeId(url)}/%(id)s.%(ext)s`,
                     '--restrict-filenames', '--continue', '--retries', '9001', '--js-runtimes', 'deno',
                     '--fragment-retries', '9001', '--write-info-json', '--write-description', '--cookies', `${process.env.COOKIE_PATH}`,
                     '--write-thumbnail', '--write-subs', '--all-subs', '--ignore-errors', '--fixup', 'detect_or_warn', '--remote-components', 'ejs:github',
-                    '--no-overwrites', '--no-update', '-o', `${process.env.DOWNLOAD_PATH}/youtube-${getYouTubeId(url)}/%(id)s.%(ext)s`, video
+                    '--no-overwrites', '--no-update', '-o', `${process.env.DOWNLOAD_PATH}/${hex}/youtube-${getYouTubeId(url)}/%(id)s.%(ext)s`, video
                 ], async (error, stdout, stderr) => {
                     if (error) {
                         console.log(`node error: ${error.message}`);
@@ -120,24 +123,24 @@ module.exports = {
                         console.log(`error from my pc or sum: ${stderr}`);
                         return;
                     }
-                    await interaction.followUp(`Downloaded now uploading...`);
+                    await interaction.editReply(`Downloaded now uploading...\n\n||Trace ID: ${hex}||`);
                     try {
-                        const files = await glob(`${process.env.DOWNLOAD_PATH}/youtube-${getYouTubeId(url)}/${getYouTubeId(url)}.*`);
-                        await uploadArchive(files).then(() => fs.rm(`${process.env.DOWNLOAD_PATH}/youtube-${getYouTubeId(url)}`, { recursive: true }, (err, data) => {
+                        const files = await glob(`${process.env.DOWNLOAD_PATH}/${hex}/youtube-${getYouTubeId(url)}/${getYouTubeId(url)}.*`);
+                        await uploadArchive(files).then(() => fs.rm(`${process.env.DOWNLOAD_PATH}/${hex}/youtube-${getYouTubeId(url)}`, { recursive: true }, (err, data) => {
                         if (err) {
                             console.log(err);
                         } else if (data) {
                             console.log(data);
                         };
                     }));
-                        await interaction.followUp(`Uploaded! https://archive.org/details/youtube-${getYouTubeId(url)}`);
+                        await interaction.editReply(`Uploaded! https://archive.org/details/youtube-${getYouTubeId(url)}\n\n||Trace ID: ${hex}||`);
                     } catch (err) {
                         console.log(`upload failed: ${err.message}`);
-                        await interaction.followUp('Upload failed.');
+                        await interaction.editReply(`Upload failed.\n\n||Trace ID: ${hex}||`);
                     }
                 });
             } else {
-                interaction.followUp(`Already archived at: https://archive.org/details/youtube-${getYouTubeId(url)}`);
+                interaction.editReply(`Already archived at: https://archive.org/details/youtube-${getYouTubeId(url)}\n\n||Trace ID: ${hex}||`);
             }
         }
 
