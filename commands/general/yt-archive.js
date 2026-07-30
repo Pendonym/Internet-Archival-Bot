@@ -1,3 +1,4 @@
+// todo: have a trace id, log everything to the trace id folder, never delete trace id folder, lookup command for trace id
 const { SlashCommandBuilder } = require('discord.js');
 const { exec, execFile } = require("child_process");
 const { glob } = require('glob')
@@ -14,15 +15,15 @@ module.exports = {
         const url = interaction.options.getString('link');
 
         if (!/^https?:\/\//i.test(url)) {
-            return interaction.reply('Please provide a valid YouTube URL.');
+            return interaction.editReply('Please provide a valid YouTube URL.');
         } else if (/[?&]list=/.test(url) | /\/(channel\/|c\/|@)/.test(url)) {
-            return interaction.reply('Playlists and channels are currently not supported if you would like to help me cook that up you can go to https://github.com/Pendonym/Internet-Archival-Bot.');
+            return interaction.editReply('Playlists and channels are currently not supported if you would like to help me cook that up you can go to https://github.com/Pendonym/Internet-Archival-Bot.');
         }
 
         await interaction.reply({ content: 'Sending request...', withResponse: true });
 
         function getYouTubeId(url) {
-            const regex = /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+            const regex = /(?:(?:music\.)?youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/)|youtu\.be\/|yt\.be\/)([a-zA-Z0-9_-]{11})/;
             const match = url.match(regex);
             return match ? match[1] : null;
         }
@@ -98,8 +99,8 @@ module.exports = {
             if (isNotArchived) {
                 await interaction.followUp(`Downloading...`);
                 execFile('yt-dlp', [
-                    '--restrict-filenames', '--continue', '--retries', '9001',
-                    '--fragment-retries', '9001', '--write-info-json', '--write-description',
+                    '--restrict-filenames', '--continue', '--retries', '9001', '--js-runtimes', 'node',
+                    '--fragment-retries', '9001', '--write-info-json', '--write-description', '--cookies', `${process.env.COOKIES_PATH}`,
                     '--write-thumbnail', '--write-subs', '--all-subs', '--ignore-errors', '--fixup',
                     'detect_or_warn', '--no-overwrites', '--no-update', '-o', `${process.env.DOWNLOAD_PATH}/youtube-${getYouTubeId(url)}/%(id)s.%(ext)s`, video
                 ], async (error, stdout, stderr) => {
@@ -128,7 +129,7 @@ module.exports = {
                     }
                 });
             } else {
-                interaction.editReply(`Already archived at: https://archive.org/details/youtube-${getYouTubeId(url)}`);
+                interaction.followUp(`Already archived at: https://archive.org/details/youtube-${getYouTubeId(url)}`);
             }
         }
 

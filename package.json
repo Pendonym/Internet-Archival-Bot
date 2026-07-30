@@ -4,14 +4,16 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node --env-file=.env main.js"
+    "start": "node --env-file=.env main.js",
+    "run": "node --env-file=.env main.js",
+    "deploy": "node --env-file=.env deploy-commands.js"
   },
   "keywords": [],
   "author": "Pendonym",
   "license": "ISC",
   "dependencies": {
+    "axios": "^1.18.1",
     "discord.js": "^14.26.4",
-    "dotenv": "^17.4.2",
     "glob": "^13.0.6",
     "glob-bin": "^1.1.0",
     "youtube-dl-exec": "^3.1.8"
