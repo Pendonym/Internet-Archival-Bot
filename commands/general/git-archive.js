@@ -3,6 +3,8 @@ const { SlashCommandBuilder } = require('discord.js');
 const { exec, execFile } = require("child_process");
 const { glob } = require('glob')
 const axios = require('axios')
+const fs = require('node:fs');
+const { error } = require('node:console');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -19,25 +21,31 @@ module.exports = {
 
         await interaction.reply({ content: 'Sending request...', withResponse: true });
 
+        function checkRequest(request_id) {
+            console.log(request_id)
+
+            axios.get(
+                `https://archive.softwareheritage.org/api/1/origin/save/${encodeURIComponent(request_id)}`
+            )
+        }
+
         function sendRequest() {
-            return axios.post(
+            // holy fucking inefficent ass code
+
+            axios.post(
                 `https://archive.softwareheritage.org/api/1/origin/save/?visit_type=git&origin_url=${encodeURIComponent(url)}`,
                 null,
                 {
                     headers: {
-                        'User-Agent': 'Internet Archival Bot +https://internet-archival.xyz/'
+                        'User-Agent': 'Internet Archival Bot +https://internet-archival.xyz/',
+                        'Authorization': `Bearer ${process.env.SOFT_HERITAGE_TOKEN}`
                     }
                 }
             ).then((response) => {
-                // send GET request to /api/1/origin/save/(request_id)/ and interaction.followUp when the task has succeeded/failed
-                interaction.editReply(`URL submitted to Software Heritage: ${response.data.request_url}`);
-                console.log(response.data.request_url);
-            }).catch((error) => {
-                interaction.editReply(`An error occured when uploading to Software Heritage.\nSent URL: ${url}`);
-                console.log(`Error: ${error}`);
-            });
+                checkRequest(response.data.id)
+            })
         }
 
         sendRequest()
-    },
+    }
 };

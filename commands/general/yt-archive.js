@@ -1,12 +1,15 @@
 // todo
 // add progress bar for upload (prob download too)
 // add a retry mechanism if the upload fails
+// forgets messages after like 5 commands and will never reply or edit prev messages
+// you cant edit a message after like 5 minutes or something else it expires or something (i forgot)
 
 const { SlashCommandBuilder } = require('discord.js');
 const { exec, execFile } = require("child_process");
 const { glob } = require('glob')
 const fs = require('node:fs');
 const { json } = require('node:stream/consumers');
+const { resolve } = require('node:dns');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -57,9 +60,9 @@ module.exports = {
 
                     const jsonData = JSON.parse(data);
                     const metaTags = `${jsonData.tags.join(`;`)}`;
-                    const dateYear = jsonData.upload_date.slice(0,4);
-                    const dateDay = jsonData.upload_date.slice(4,6);
-                    const dateMonth = jsonData.upload_date.slice(6,8);
+                    const dateYear = jsonData.upload_date.slice(0, 4);
+                    const dateDay = jsonData.upload_date.slice(4, 6);
+                    const dateMonth = jsonData.upload_date.slice(6, 8);
 
                     if (jsonData.description === "") {
                         jsonData.description = "Description was not provided in this video. While you're here try out the bot that uploaded this video at https://internet-archival.xyz";
@@ -109,22 +112,23 @@ module.exports = {
                 ], async (error, stdout, stderr) => {
                     if (error) {
                         console.log(`node error: ${error.message}`);
-                        return;
+                        return reject(error);
                     }
-                    if (stderr) {
-                        console.log(`error from my pc or sum: ${stderr}`);
-                        return;
-                    }
+                    resolve(stdout);
+                    // if (stderr) {
+                    //     console.log(`error from my pc or sum: ${stderr}`);
+                    //     return;
+                    // }
                     await interaction.followUp(`Downloaded now uploading...`);
                     try {
                         const files = await glob(`${process.env.DOWNLOAD_PATH}/youtube-${getYouTubeId(url)}/${getYouTubeId(url)}.*`);
                         await uploadArchive(files).then(() => fs.rm(`${process.env.DOWNLOAD_PATH}/youtube-${getYouTubeId(url)}`, { recursive: true }, (err, data) => {
-                        if (err) {
-                            console.log(err);
-                        } else if (data) {
-                            console.log(data);
-                        };
-                    }));
+                            if (err) {
+                                console.log(err);
+                            } else if (data) {
+                                console.log(data);
+                            };
+                        }));
                         await interaction.followUp(`Uploaded! https://archive.org/details/youtube-${getYouTubeId(url)}`);
                     } catch (err) {
                         console.log(`upload failed: ${err.message}`);
