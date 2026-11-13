@@ -2,7 +2,6 @@
 // add progress bar for upload (prob download too)
 // add a retry mechanism if the upload fails
 // forgets messages after like 5 commands and will never reply or edit prev messages
-// you cant edit a message after like 5 minutes or something else it expires or something (i forgot)
 // check if time has been over 15 minutes and respond with a new message instead of replying
 
 const { SlashCommandBuilder } = require('discord.js');
@@ -130,12 +129,12 @@ module.exports = {
                     try {
                         const files = await glob(`${process.env.DOWNLOAD_PATH}/youtube-${getYouTubeId(url)}/${getYouTubeId(url)}.*`);
                         await uploadArchive(files).then(() => fs.rm(`${process.env.DOWNLOAD_PATH}/youtube-${getYouTubeId(url)}`, { recursive: true }, (err, data) => {
-                        if (err) {
-                            console.log(err);
-                        } else if (data) {
-                            console.log(data);
-                        };
-                    }));
+                            if (err) {
+                                console.log(err);
+                            } else if (data) {
+                                console.log(data);
+                            };
+                        }));
                         await interaction.followUp(`Uploaded! https://archive.org/details/youtube-${getYouTubeId(url)}`);
                     } catch (err) {
                         console.log(`upload failed: ${err.message}`);
