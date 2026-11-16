@@ -10,6 +10,28 @@ const getInformationByTraceId = database.prepare(`
     SELECT * FROM log WHERE trace_id = ?
 `);
 
+const getAllYouTubeVideos = database.prepare(`
+    SELECT * FROM log
+    WHERE url LIKE '%youtube.com/%'
+       OR url LIKE '%youtu.be/%'
+       OR url LIKE '%yt.be/%'
+`);
+
+const getTotalYouTubeStorage = database.prepare(`
+    SELECT COALESCE(SUM(storage), 0) AS total_storage_bytes
+    FROM log
+    WHERE url LIKE '%youtube.com/%'
+       OR url LIKE '%youtu.be/%'
+       OR url LIKE '%yt.be/%'
+`);
+
+const updateStorage = database.prepare(`
+    UPDATE log
+    SET storage = ?
+    WHERE trace_id = ?
+    RETURNING trace_id, storage
+`);
+
 const getLogByTraceId = database.prepare(`
     SELECT log FROM log WHERE trace_id = ?
 `);
@@ -31,6 +53,9 @@ const deleteLog = database.prepare(`
 module.exports = {
     addLog,
     getInformationByTraceId,
+    getAllYouTubeVideos,
+    getTotalYouTubeStorage,
+    updateStorage,
     getLogByTraceId,
     updateLogFile,
     updateStatus,

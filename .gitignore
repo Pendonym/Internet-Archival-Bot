@@ -217,6 +217,5 @@ $RECYCLE.BIN/
 
 # End of https://www.toptal.com/developers/gitignore/api/windows,macos,linux,node
 
-user_log.json
 log.db
 helpers/cool-lines-counter.sh

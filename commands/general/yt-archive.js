@@ -1,8 +1,8 @@
 // add a retry mechanism if the upload fails (rare but possible)
 // forgets messages after like 5 commands and will never reply or edit prev messages (maybe due to 15m limit?)
-// check if time has been over 15 you need to go back to the message id then edit it instead of using editReply because the interaction token expired
+// check if time has been over 15m because you need to go back to the message id then edit the message (interaction expired)
 const { SlashCommandBuilder } = require('discord.js');
-const { addLog, updateLogFile, updateStatus } = require('../../helpers/data/queries');
+const { addLog, updateLogFile, updateStatus, updateStorage } = require('../../helpers/data/queries');
 const generateTraceId = require("../../helpers/traceIdGenerator.js");
 const { exec, execFile } = require("child_process");
 const { glob } = require('glob')
@@ -36,13 +36,13 @@ module.exports = {
 
         if (!/^https?:\/\//i.test(url)) {
             await log(`User didn't provide a valid URL.`);
-            return interaction.reply(`Please provide a valid URL.`);
+            return interaction.reply(`Please provide a valid URL.\n\nTrace ID: ${trace_id}`);
         } else if (/[?&]list=/.test(url) || /\/(channel\/|c\/|@)/.test(url)) {
             await log(`User tried to submit a playlist or a channel.`);
-            return interaction.reply(`Playlists and channels are currently not supported if you would like to help me cook that up you can go to https://github.com/Pendonym/Internet-Archival-Bot.`);
+            return interaction.reply(`Playlists and channels are currently not supported if you would like to help me cook that up you can go to https://github.com/Pendonym/Internet-Archival-Bot.\n\nTrace ID: ${trace_id}`);
         } else if (!getYouTubeId(url)) {
             await log(`User didn't provide a valid YouTube URL.`);
-            return interaction.reply('Please provide a valid YouTube video URL.');
+            return interaction.reply('Please provide a valid YouTube video URL.\n\nTrace ID: ${trace_id}');
         }
 
         await log(`Starting to send request for download.`);
@@ -67,7 +67,7 @@ module.exports = {
         }
 
         const reply = await interaction.fetchReply();
-        addLog.get(trace_id, url, interaction.user.id, interaction.channel.id, reply.id, "pending", logContents)
+        addLog.get(trace_id, url, interaction.user.id, interaction.channelId, reply.id, "pending", logContents)
         logRecordCreated = true;
         await log(`Created the trace record in SQLite.`);
 
@@ -102,7 +102,7 @@ module.exports = {
                     '-m', `title:${jsonData.title}`,
                     '-m', `description:${jsonData.description}`,
                     '-m', `subject:Youtube;video;${metaTags}`,
-                    '-m', 'collection:test_collection', // opensource_movies and test_collection
+                    '-m', 'collection:opensource_movies', // opensource_movies and test_collection
                     '-m', 'scanner:Internet Archival Bot +https://internet-archival.xyz',
                     '-m', `channel:${jsonData.channel_url}`,
                     '-m', `originalurl:${jsonData.webpage_url}`,
@@ -136,7 +136,7 @@ module.exports = {
                         '--fragment-retries', '10', '--write-info-json', '--write-description', '--cookies', `${process.env.COOKIE_PATH}`,
                         '--write-thumbnail', '--write-subs', '--all-subs', '--ignore-errors', '--fixup',
                         'detect_or_warn', '--no-overwrites', '--no-update', '-o', `${process.env.DOWNLOAD_PATH}/${trace_id}/youtube-${getYouTubeId(url)}/%(id)s.%(ext)s`,
-                        '--js-runtimes', 'deno', '--remote-components', 'ejs:github', url
+                        '--js-runtimes', 'deno', '--remote-components', 'ejs:github', '--audio-quality', '0', '-f', `b`, url
                     ], (error, stdout, stderr) => {
                         if (error) {
                             error.stderr = stderr;
@@ -150,13 +150,13 @@ module.exports = {
                 await log(`yt-dlp failed: ${err.message}${err.stderr ? `\n${err.stderr}` : ''}`);
                 updateStatus.get("download failed", trace_id)
                 console.error('Downloading the video failed:', err);
-                await interaction.followUp(`Download failed.\n\nTrace ID: ${trace_id}`);
+                await interaction.editReply(`Download failed.\n\nTrace ID: ${trace_id}`);
                 return;
             }
 
             await log(`Finished downloading the video; starting upload to Internet Archive.`);
             updateStatus.get("uploading", trace_id)
-            await interaction.followUp(`Downloaded now uploading...\n\nTrace ID: ${trace_id}`);
+            await interaction.editReply(`Downloaded now uploading...\n\nTrace ID: ${trace_id}`);
 
             try {
                 const files = await glob(`${process.env.DOWNLOAD_PATH}/${trace_id}/youtube-${getYouTubeId(url)}/${getYouTubeId(url)}.*`);
@@ -164,7 +164,26 @@ module.exports = {
                     throw new Error('No downloaded files were found to upload.');
                 }
 
+                const storage = (await Promise.all(files.map(async (file) => {
+                    const fileStats = await fs.promises.stat(file);
+                    return fileStats.size;
+                }))).reduce((total, size) => total + size, 0);
+
                 const uploadOutput = await uploadArchive(files);
+                try {
+                    const updatedStorage = updateStorage.get(storage, trace_id);
+                    if (!updatedStorage) {
+                        throw new Error(`No log record found for trace ID ${trace_id}.`);
+                    }
+                    await log(`Recorded ${storage} bytes across ${files.length} uploaded files.`);
+                } catch (storageError) {
+                    updateStatus.get("storage record failed", trace_id);
+                    await log(`Upload succeeded, but storage could not be recorded: ${storageError.message}`);
+                    console.error('Upload succeeded, but storage could not be recorded:', storageError);
+                    await interaction.followUp(`Uploaded, but storage tracking failed.\n\nTrace ID: ${trace_id}`);
+                    return;
+                }
+
                 const output = [
                     uploadOutput.stdout && `stdout:\n${uploadOutput.stdout.trim()}`,
                     uploadOutput.stderr && `stderr:\n${uploadOutput.stderr.trim()}`,
@@ -181,12 +200,12 @@ module.exports = {
 
                 updateStatus.get("uploaded", trace_id)
                 await log(`Successfully uploaded the video. https://archive.org/details/youtube-${getYouTubeId(url)}`);
-                await interaction.followUp(`Uploaded! https://archive.org/details/youtube-${getYouTubeId(url)}`);
+                await interaction.editReply(`Uploaded! https://archive.org/details/youtube-${getYouTubeId(url)}\n\nTrace ID: ${trace_id}`);
             } catch (err) {
                 updateStatus.get("uploading failed", trace_id)
                 await log(`Upload failed: ${err.message}${err.stderr ? `\n${err.stderr}` : ''}`);
                 console.error('Uploading the video failed:', err);
-                await interaction.followUp(`Upload failed.\n\nTrace ID: ${trace_id}`);
+                await interaction.editReply(`Upload failed.\n\nTrace ID: ${trace_id}`);
             }
         }
     }
