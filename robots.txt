@@ -26,6 +26,10 @@
 # DIRECTIVE 2019/790 ON COPYRIGHT AND RELATED RIGHTS IN THE
 # DIGITAL SINGLE MARKET.
 
+User-agent: *
+Content-Signal: ai-train=no, search=yes, ai-input=no
+Allow: /
+
 ##############
 ## SEO bots ##
 ##############
@@ -72,8 +76,114 @@ Disallow: /
 User-agent: SenutoBot
 Disallow: /
 
-User-agent: *
-Content-Signal: ai-train=yes, search=yes, ai-input=yes
-Allow: /
+User-agent: SERankingBacklinksBot
+Disallow: /
+
+User-agent: Sogou
+Disallow: /
+
+User-agent: SeznamBot
+Disallow: /
+
+User-agent: Nutch
+Disallow: /
+
+User-agent: Scrapy
+Disallow: /
+
+User-agent: CensysInspect
+Disallow: /
+
+User-agent: omgili
+Disallow: /
+
+User-agent: DataForSeoSiteExplorer
+Disallow: /
+
+#############
+## AI bots ##
+#############
+# Mmost of these don't even follow robots.txt anyways 🫩
+
+User-agent: GPTBot
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: yacybot
+Disallow: /
+
+User-agent: meta-externalagent
+Disallow: /
+
+User-agent: meta-webindexer
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: Claude-SearchBot
+Disallow: /
+
+User-agent: AI2Bot
+Disallow: /
+
+User-agent: OAI-SearchBot
+Disallow: /
+
+User-agent: thetradedesk
+Disallow: /
+
+User-agent: carbon-umbrella-bot
+Disallow: /
+
+User-agent: PerplexityBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: TerraCotta
+Disallow: /
+
+User-agent: SiteSucker
+Disallow: /
+
+User-agent: Applebot
+Disallow: /
+
+User-agent: Brightbot
+Disallow: /
+
+User-agent: Aranet
+Disallow: /
+
+User-agent: SleepBot
+Disallow: /
+
+User-agent: AmazonProductDiscoveryBot
+Disallow: /
+
+User-agent: Dragonfly
+Disallow: /
+
+User-agent: YouBot
+Disallow: /
+
+User-agent: CorsairBot
+Disallow: /
+
+User-agent: NavCrawl
+Disallow: /
+
+User-agent: KeenableBot
+Disallow: /
+
+User-agent: AionBot
+Disallow: /
 
 Sitemap: https://internet-archival.xyz/sitemap.xml

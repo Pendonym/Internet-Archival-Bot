@@ -1,4 +1,4 @@
-.venv
+node_modules/
+helpers/
+log.db
 .env
-__pycache__/
-tubeup_downloads/
