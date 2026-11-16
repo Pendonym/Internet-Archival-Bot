@@ -6,8 +6,12 @@ const addLog = database.prepare(`
    RETURNING trace_id, url, message_id, status, log
 `);
 
-const getLogByTraceId = database.prepare(`
+const getInformationByTraceId = database.prepare(`
     SELECT * FROM yt_log WHERE trace_id = ?
+`);
+
+const getLogByTraceId = database.prepare(`
+    SELECT log FROM yt_log WHERE trace_id = ?
 `);
 
 const updateLogFile = database.prepare(`
@@ -26,6 +30,7 @@ const deleteLog = database.prepare(`
 
 module.exports = {
     addLog,
+    getInformationByTraceId,
     getLogByTraceId,
     updateLogFile,
     updateStatus,

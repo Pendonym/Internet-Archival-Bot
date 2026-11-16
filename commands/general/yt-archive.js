@@ -1,4 +1,4 @@
-// todo: have a trace id, log everything to the trace id folder, never delete trace id folder, lookup command for trace id (or mabye just save to sqlite db)
+// todo: log everything into sql log
 // add progress bar for upload (prob download too)
 // add a retry mechanism if the upload fails
 // forgets messages after like 5 commands and will never reply or edit prev messages

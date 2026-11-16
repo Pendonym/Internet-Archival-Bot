@@ -1,4 +1,4 @@
-// todo: have a trace id, log everything to the trace id folder, never delete trace id folder, lookup command for trace id (or maybe just save to sqlite db)
+// todo: log everything into sql log (maybe?)
 // (most likely) forgets messages after like 5 commands and will never reply or edit prev messages
 // check if time has been over 15 you need to go back to the message id then edit it instead of using editReply because the interaction token expired
 const { SlashCommandBuilder } = require('discord.js');
