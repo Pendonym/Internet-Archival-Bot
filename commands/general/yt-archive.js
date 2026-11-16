@@ -4,7 +4,7 @@
 // forgets messages after like 5 commands and will never reply or edit prev messages
 // check if time has been over 15 you need to go back to the message id then edit it instead of using editReply because the interaction token expired
 const { SlashCommandBuilder } = require('discord.js');
-const { addLog, updateStatus } = require('../../helpers/data/queries');
+const { addLog, updateLogFile, updateStatus } = require('../../helpers/data/queries');
 const generateTraceId = require("../../helpers/traceIdGenerator.js");
 const { exec, execFile } = require("child_process");
 const { glob } = require('glob')
@@ -19,14 +19,35 @@ module.exports = {
     async execute(interaction) {
         const url = interaction.options.getString('link');
 
+        const trace_id = generateTraceId()
+        const logFile = `${process.env.DOWNLOAD_PATH}/${trace_id}/latest.log`;
+
+        let logContents = '';
+        let logRecordCreated = false;
+
+        async function log(text) {
+            const entry = `[${new Date().toISOString()}] ${text}\n`;
+            logContents += entry;
+            await fs.promises.mkdir(`${process.env.DOWNLOAD_PATH}/${trace_id}`, { recursive: true });
+            await fs.promises.appendFile(logFile, entry);
+
+            if (logRecordCreated && !updateLogFile.get(logContents, trace_id)) {
+                throw new Error(`Could not update the database log for trace ID ${trace_id}.`);
+            }
+        }
+
         if (!/^https?:\/\//i.test(url)) {
+            await log(`User didn't provide a valid URL.`);
             return interaction.reply(`Please provide a valid YouTube URL.`);
         } else if (/[?&]list=/.test(url) || /\/(channel\/|c\/|@)/.test(url)) {
+            await log(`User tried to submit a playlist or a channel.`);
             return interaction.reply(`Playlists and channels are currently not supported if you would like to help me cook that up you can go to https://github.com/Pendonym/Internet-Archival-Bot.`);
         } else if (!getYouTubeId(url)) {
+            await log(`User didn't provide a valid YouTube URL.`);
             return interaction.reply('Please provide a valid YouTube video URL.');
         }
 
+        await log(`Starting to send request for download.`);
         await interaction.reply({ content: 'Sending request...', withResponse: true });
 
         function getYouTubeId(url) {
@@ -39,7 +60,7 @@ module.exports = {
             return new Promise((resolve, reject) => {
                 exec(`ia metadata youtube-${getYouTubeId(url)}`, (error, stdout, stderr) => {
                     if (error) {
-                        console.log(`Error occured in Node: ${error.message}`);
+                        error.stderr = stderr;
                         return reject(error);
                     }
                     resolve(stdout.length < 10);
@@ -47,15 +68,18 @@ module.exports = {
             });
         }
 
-        const trace_id = generateTraceId()
         const reply = await interaction.fetchReply();
-        addLog.get(trace_id, url, interaction.user.id, interaction.channel.id, reply.id, "pending", null)
+        addLog.get(trace_id, url, interaction.user.id, interaction.channel.id, reply.id, "pending", logContents)
+        logRecordCreated = true;
+        await log(`Created the trace record in SQLite.`);
 
         let isNotArchived;
         try {
             isNotArchived = await checkArchive();
+            await log(`Archive check completed; archived: ${!isNotArchived}.`);
         } catch (err) {
-            console.log(`Error occursed inside of checkArchive: ${err}`);
+            await log(`Archive check failed: ${err.message}${err.stderr ? `\n${err.stderr}` : ''}`);
+            console.error('Archive check failed:', err);
             updateStatus.get("archive check failed", trace_id);
             await interaction.editReply(`Could not check archive.org.\n\nTrace ID: ${trace_id}`);
             return;
@@ -88,25 +112,27 @@ module.exports = {
                     '-m', "mediatype:movies",
                     '-m', `year:${dateYear}`,
                     '-m', `date:${dateYear}-${dateMonth}-${dateDay}`
-                ], (error, stdout) => {
+                ], (error, stdout, stderr) => {
                     if (error) {
-                        console.log(`Error occured in Node: ${error.message}`);
+                        error.stderr = stderr;
                         return reject(error);
                     }
-                    resolve(stdout);
+                    resolve({ stdout, stderr });
                 });
             });
         }
 
         if (!isNotArchived) {
+            await log(`Video is already archived.`);
             updateStatus.get("already archived", trace_id)
             await interaction.editReply(`Video is already archived at: https://archive.org/details/youtube-${getYouTubeId(url)}\n\nTrace ID: ${trace_id}`);
         } else {
             updateStatus.get("downloading", trace_id)
+            await log(`Started downloading the video.`);
             await interaction.editReply(`Downloading...\n\nTrace ID: ${trace_id}`);
 
             try {
-                await new Promise((resolve, reject) => {
+                const downloadOutput = await new Promise((resolve, reject) => {
                     execFile('yt-dlp', [
                         '--restrict-filenames', '--continue', '--retries', '9001', '--js-runtimes', 'node',
                         '--fragment-retries', '9001', '--write-info-json', '--write-description', '--cookies', `${process.env.COOKIE_PATH}`,
@@ -116,21 +142,24 @@ module.exports = {
                         '--fragment-retries', '9001', '--write-info-json', '--write-description', '--cookies', `${process.env.COOKIE_PATH}`,
                         '--write-thumbnail', '--write-subs', '--all-subs', '--ignore-errors', '--fixup', 'detect_or_warn', '--remote-components', 'ejs:github',
                         '--no-overwrites', '--no-update', '-o', `${process.env.DOWNLOAD_PATH}/${trace_id}/youtube-${getYouTubeId(url)}/%(id)s.%(ext)s`, url
-                    ], (error, stdout) => {
+                    ], (error, stdout, stderr) => {
                         if (error) {
-                            console.log(`Error occured in Node: ${error.message}`);
+                            error.stderr = stderr;
                             return reject(error);
                         }
                         resolve(stdout);
                     });
                 });
+                await log(`yt-dlp output:\n${downloadOutput}`);
             } catch (err) {
+                await log(`yt-dlp failed: ${err.message}${err.stderr ? `\n${err.stderr}` : ''}`);
                 updateStatus.get("download failed", trace_id)
-                console.log(`Downloading the video has failed: ${err.message}`);
+                console.error('Downloading the video failed:', err);
                 await interaction.followUp(`Download failed.\n\nTrace ID: ${trace_id}`);
                 return;
             }
 
+            await log(`Finished downloading the video; starting upload to Internet Archive.`);
             updateStatus.get("uploading", trace_id)
             await interaction.followUp(`Downloaded now uploading...\n\nTrace ID: ${trace_id}`);
 
@@ -140,17 +169,28 @@ module.exports = {
                     throw new Error('No downloaded files were found to upload.');
                 }
 
-                await uploadArchive(files);
-                updateStatus.get("uploaded", trace_id)
+                const uploadOutput = await uploadArchive(files);
+                const output = [
+                    uploadOutput.stdout && `stdout:\n${uploadOutput.stdout.trim()}`,
+                    uploadOutput.stderr && `stderr:\n${uploadOutput.stderr.trim()}`,
+                ].filter(Boolean).join('\n');
+                if (output) {
+                    await log(`Internet Archive upload output:\n${output}`);
+                }
                 try {
                     await fs.promises.rm(`${process.env.DOWNLOAD_PATH}/${trace_id}/youtube-${getYouTubeId(url)}`, { recursive: true, force: true });
                 } catch (cleanupError) {
-                    console.log(`Upload succeeded, but downloaded files could not be removed: ${cleanupError.message}`);
+                    await log(`Upload succeeded, but downloaded files could not be removed: ${cleanupError.message}`);
+                    console.error('Upload succeeded, but downloaded files could not be removed:', cleanupError);
                 }
+
+                updateStatus.get("uploaded", trace_id)
+                await log(`Successfully uploaded the video. https://archive.org/details/youtube-${getYouTubeId(url)}`);
                 await interaction.followUp(`Uploaded! https://archive.org/details/youtube-${getYouTubeId(url)}`);
             } catch (err) {
                 updateStatus.get("uploading failed", trace_id)
-                console.log(`Uploading the video has failed: ${err.message}`);
+                await log(`Upload failed: ${err.message}${err.stderr ? `\n${err.stderr}` : ''}`);
+                console.error('Uploading the video failed:', err);
                 await interaction.followUp(`Upload failed.\n\nTrace ID: ${trace_id}`);
             }
         }
