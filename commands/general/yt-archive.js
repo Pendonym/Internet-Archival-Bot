@@ -1,7 +1,5 @@
-// todo: log everything into sql log
-// add progress bar for upload (prob download too)
-// add a retry mechanism if the upload fails
-// forgets messages after like 5 commands and will never reply or edit prev messages
+// add a retry mechanism if the upload fails (rare but possible)
+// forgets messages after like 5 commands and will never reply or edit prev messages (maybe due to 15m limit?)
 // check if time has been over 15 you need to go back to the message id then edit it instead of using editReply because the interaction token expired
 const { SlashCommandBuilder } = require('discord.js');
 const { addLog, updateLogFile, updateStatus } = require('../../helpers/data/queries');
@@ -38,7 +36,7 @@ module.exports = {
 
         if (!/^https?:\/\//i.test(url)) {
             await log(`User didn't provide a valid URL.`);
-            return interaction.reply(`Please provide a valid YouTube URL.`);
+            return interaction.reply(`Please provide a valid URL.`);
         } else if (/[?&]list=/.test(url) || /\/(channel\/|c\/|@)/.test(url)) {
             await log(`User tried to submit a playlist or a channel.`);
             return interaction.reply(`Playlists and channels are currently not supported if you would like to help me cook that up you can go to https://github.com/Pendonym/Internet-Archival-Bot.`);
