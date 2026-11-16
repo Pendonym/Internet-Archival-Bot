@@ -134,14 +134,11 @@ module.exports = {
             try {
                 const downloadOutput = await new Promise((resolve, reject) => {
                     execFile('yt-dlp', [
-                        '--restrict-filenames', '--continue', '--retries', '9001', '--js-runtimes', 'node',
-                        '--fragment-retries', '9001', '--write-info-json', '--write-description', '--cookies', `${process.env.COOKIE_PATH}`,
+                        '--restrict-filenames', '--continue', '--retries', '10', '--js-runtimes', 'node',
+                        '--fragment-retries', '10', '--write-info-json', '--write-description', '--cookies', `${process.env.COOKIE_PATH}`,
                         '--write-thumbnail', '--write-subs', '--all-subs', '--ignore-errors', '--fixup',
                         'detect_or_warn', '--no-overwrites', '--no-update', '-o', `${process.env.DOWNLOAD_PATH}/${trace_id}/youtube-${getYouTubeId(url)}/%(id)s.%(ext)s`,
-                        '--restrict-filenames', '--continue', '--retries', '9001', '--js-runtimes', 'deno',
-                        '--fragment-retries', '9001', '--write-info-json', '--write-description', '--cookies', `${process.env.COOKIE_PATH}`,
-                        '--write-thumbnail', '--write-subs', '--all-subs', '--ignore-errors', '--fixup', 'detect_or_warn', '--remote-components', 'ejs:github',
-                        '--no-overwrites', '--no-update', '-o', `${process.env.DOWNLOAD_PATH}/${trace_id}/youtube-${getYouTubeId(url)}/%(id)s.%(ext)s`, url
+                        '--js-runtimes', 'deno', '--remote-components', 'ejs:github', url
                     ], (error, stdout, stderr) => {
                         if (error) {
                             error.stderr = stderr;
