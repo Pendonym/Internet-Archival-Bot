@@ -42,10 +42,10 @@ module.exports = {
                 })
 
                 if (save_task_status == "succeeded") {
-                    interaction.followUp("It works boi!")
+                    interaction.followUp("Request was successfully sent to Software Heritage!")
                     break
                 } else if (save_task_status == "failed") {
-                    interaction.followUp("It doesnt work boi!")
+                    interaction.followUp(`Request was successfully sent to Software Heritage but failed!\n\nhttps://archive.softwareheritage.org/api/1/origin/save/${encodeURIComponent(request_id)}`)
                     break
                 } else if (save_request_status == "rejected") {
                     interaction.followUp(`Software Heritage has rejected this request.\n\nhttps://archive.softwareheritage.org/api/1/origin/save/${encodeURIComponent(request_id)}`)
