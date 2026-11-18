@@ -91,6 +91,16 @@ module.exports = {
                         const metadata = JSON.parse(stdout);
                         if (metadata.is_dark === true) {
                             prefix = `yt`;
+                            return exec(
+                                `ia metadata ${getArchiveIdentifier()}`,
+                                (error, stdout, stderr) => {
+                                    if (error) {
+                                        error.stderr = stderr;
+                                        return reject(error);
+                                    }
+                                    resolve(stdout.length < 10);
+                                },
+                            );
                         }
                     }
                     resolve(stdout.length < 10);
