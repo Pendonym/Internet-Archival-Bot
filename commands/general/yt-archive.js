@@ -2,8 +2,6 @@
 // forgets messages after like 5 commands and will never reply or edit prev messages (maybe due to 15m limit?)
 // check if time has been over 15m because you need to go back to the message id then edit the message (interaction expired)
 
-//check global rate limits python example:
-
 const { SlashCommandBuilder } = require(`discord.js`);
 const { addLog, updateLogFile, updateStatus, updateStorage } = require(
     `../../helpers/data/queries`,
@@ -13,6 +11,7 @@ const { exec, execFile } = require(`child_process`);
 const { glob } = require(`glob`);
 const fs = require(`node:fs`);
 const { default: axios } = require(`axios`);
+const { setTimeout: sleep } = require(`node:timers/promises`);
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -75,12 +74,24 @@ module.exports = {
             return match ? match[1] : null;
         }
 
+        let prefix = `youtube`;
+
+        function getArchiveIdentifier() {
+            return `${prefix}-${getYouTubeId(url)}`;
+        }
+
         function checkArchive() {
             return new Promise((resolve, reject) => {
                 exec(`ia metadata youtube-${getYouTubeId(url)}`, (error, stdout, stderr) => {
                     if (error) {
                         error.stderr = stderr;
                         return reject(error);
+                    }
+                    if (stdout.length >= 10) {
+                        const metadata = JSON.parse(stdout);
+                        if (metadata.is_dark === true) {
+                            prefix = `yt`;
+                        }
                     }
                     resolve(stdout.length < 10);
                 });
@@ -127,61 +138,52 @@ module.exports = {
                 jsonData.description = `Description was not provided in this video. While you're here try out the bot that uploaded this video at https://internet-archival.xyz`;
             }
 
+            let response = await axios.get(`https://s3.us.archive.org/`, {
+                params: {
+                    check_limit: 1,
+                    accesskey: `${process.env.IA_SECRET}`,
+                    bucket: `${process.env.IA_ACCESS}`,
+                },
+                timeout: 12000,
+            });
+            let over_limit = response.data.over_limit;
+
+            while (over_limit != 0) {
+                await sleep(5_000);
+                response = await axios.get(`https://s3.us.archive.org/`, {
+                    params: {
+                        check_limit: 1,
+                        accesskey: `${process.env.IA_SECRET}`,
+                        bucket: `${process.env.IA_ACCESS}`,
+                    },
+                    timeout: 12000,
+                });
+                over_limit = response.data.over_limit;
+            }
+
             return new Promise((resolve, reject) => {
-                let request = axios
-                    .get(`https://s3.us.archive.org/`, {
-                        params: {
-                            check_limit: 1,
-                            accesskey: `${process.env.IA_SECRET}`,
-                            bucket: `${process.env.IA_ACCESS}`,
-                        },
-                        timeout: 12000,
-                    })
-                    .then((response) => {
-                        let over_limit = response.data.over_limit;
-
-                        if (over_limit != 0) {
-                            while (over_limit != 0) {
-                                sleep(5_000);
-
-                                axios
-                                    .get(`https://s3.us.archive.org/`, {
-                                        params: {
-                                            check_limit: 1,
-                                            accesskey: `${process.env.IA_SECRET}`,
-                                            bucket: `${process.env.IA_ACCESS}`,
-                                        },
-                                        timeout: 12000,
-                                    })
-                                    .then((response) => {
-                                        over_limit = response.data.over_limit;
-                                    });
-                            }
-                        } else {
-                            // prettier-ignore
-                            execFile(`ia`, [
-                                `upload`, `youtube-${getYouTubeId(url)}`,
-                                ...files,
-                                `-m`, `title:${jsonData.title}`,
-                                `-m`, `description:${jsonData.description}`,
-                                `-m`, `subject:Youtube;video;${metaTags}`,
-                                `-m`, `collection:opensource_movies`, // opensource_movies and test_collection
-                                `-m`, `scanner:Internet Archival Bot +https://internet-archival.xyz`,
-                                `-m`, `channel:${jsonData.channel_url}`,
-                                `-m`, `originalurl:${jsonData.webpage_url}`,
-                                `-m`, `creator:${jsonData.uploader}`,
-                                `-m`, `mediatype:movies`,
-                                `-m`, `year:${dateYear}`,
-                                `-m`, `date:${dateYear}-${dateMonth}-${dateDay}`,
-                            ], (error, stdout, stderr) => {
-                                if (error) {
-                                    error.stderr = stderr;
-                                    return reject(error);
-                                }
-                                resolve({ stdout, stderr });
-                            });
-                        }
-                    });
+                // prettier-ignore
+                execFile(`ia`, [
+                    `upload`, getArchiveIdentifier(),
+                    ...files,
+                    `-m`, `title:${jsonData.title}`,
+                    `-m`, `description:${jsonData.description}`,
+                    `-m`, `subject:Youtube;video;${metaTags}`,
+                    `-m`, `collection:opensource_movies`, // opensource_movies and test_collection
+                    `-m`, `scanner:Internet Archival Bot +https://internet-archival.xyz`,
+                    `-m`, `channel:${jsonData.channel_url}`,
+                    `-m`, `originalurl:${jsonData.webpage_url}`,
+                    `-m`, `creator:${jsonData.uploader}`,
+                    `-m`, `mediatype:movies`,
+                    `-m`, `year:${dateYear}`,
+                    `-m`, `date:${dateYear}-${dateMonth}-${dateDay}`,
+                ], (error, stdout, stderr) => {
+                    if (error) {
+                        error.stderr = stderr;
+                        return reject(error);
+                    }
+                    resolve({ stdout, stderr });
+                });
             });
         }
 
@@ -189,7 +191,7 @@ module.exports = {
             await log(`Video is already archived.`);
             updateStatus.get(`already archived`, trace_id);
             await interaction.editReply(
-                `Video is already archived at: https://archive.org/details/youtube-${getYouTubeId(url)}\n\nTrace ID: ${trace_id}`,
+                `Video is already archived at: https://archive.org/details/${getArchiveIdentifier()}\n\nTrace ID: ${trace_id}`,
             );
         } else {
             updateStatus.get(`downloading`, trace_id);
@@ -307,10 +309,10 @@ module.exports = {
 
                 updateStatus.get(`uploaded`, trace_id);
                 await log(
-                    `Successfully uploaded the video. https://archive.org/details/youtube-${getYouTubeId(url)}`,
+                    `Successfully uploaded the video. https://archive.org/details/${getArchiveIdentifier()}`,
                 );
                 await interaction.editReply(
-                    `Uploaded! https://archive.org/details/youtube-${getYouTubeId(url)}\n\nTrace ID: ${trace_id}`,
+                    `Uploaded! https://archive.org/details/${getArchiveIdentifier()}\n\nTrace ID: ${trace_id}`,
                 );
             } catch (err) {
                 updateStatus.get(`uploading failed`, trace_id);
