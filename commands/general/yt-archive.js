@@ -1,6 +1,7 @@
 // add a retry mechanism if the upload fails (rare but possible)
 // forgets messages after like 5 commands and will never reply or edit prev messages (maybe due to 15m limit?)
 // check if time has been over 15m because you need to go back to the message id then edit the message (interaction expired)
+// program crashes entirely if it has been over 15m and it tries to edit the interaction
 
 const { SlashCommandBuilder } = require(`discord.js`);
 const { addLog, updateLogFile, updateStatus, updateStorage } = require(
